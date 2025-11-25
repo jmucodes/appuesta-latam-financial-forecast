@@ -7,44 +7,44 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; color: #2c3e50; padding: 20px; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; color: #53565a; padding: 20px; }
         .container { max-width: 1600px; margin: 0 auto; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #e4002b 0%, #b8001f 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .header h1 { font-size: 32px; margin-bottom: 10px; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 12px 24px; background: white; border: 2px solid #e0e6ed; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
-        .tab:hover { border-color: #667eea; color: #667eea; }
-        .tab.active { background: #667eea; color: white; border-color: #667eea; }
+        .tab:hover { border-color: #e4002b; color: #e4002b; }
+        .tab.active { background: #e4002b; color: white; border-color: #e4002b; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .scenario-toggle { display: flex; gap: 10px; margin-bottom: 20px; }
         .scenario-btn { flex: 1; padding: 15px; background: white; border: 2px solid #e0e6ed; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
-        .scenario-btn.active { background: #667eea; color: white; border-color: #667eea; }
+        .scenario-btn.active { background: #e4002b; color: white; border-color: #e4002b; }
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .metric-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .metric-card h3 { font-size: 14px; color: #7f8c8d; margin-bottom: 10px; text-transform: uppercase; }
-        .metric-card .value { font-size: 28px; font-weight: 700; color: #2c3e50; margin-bottom: 5px; }
+        .metric-card .value { font-size: 28px; font-weight: 700; color: #53565a; margin-bottom: 5px; }
         .metric-card.positive .value { color: #27ae60; }
-        .metric-card.negative .value { color: #e74c3c; }
+        .metric-card.negative .value { color: #e4002b; }
         .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .card h2 { font-size: 20px; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        .card h2 { font-size: 20px; margin-bottom: 20px; border-bottom: 2px solid #e4002b; padding-bottom: 10px; }
         .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .input-group { display: flex; flex-direction: column; }
         .input-group label { font-weight: 600; margin-bottom: 8px; font-size: 14px; }
         .input-group input { padding: 10px; border: 2px solid #e0e6ed; border-radius: 6px; font-size: 14px; }
-        .input-group input:focus { outline: none; border-color: #667eea; }
+        .input-group input:focus { outline: none; border-color: #e4002b; }
         .input-group small { color: #7f8c8d; margin-top: 5px; font-size: 12px; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
         table th { background: #f8f9fa; padding: 10px 6px; text-align: right; font-weight: 600; border-bottom: 2px solid #e0e6ed; }
         table th:first-child { text-align: left; }
         table td { padding: 8px 6px; text-align: right; border-bottom: 1px solid #f0f0f0; }
         table td:first-child { text-align: left; font-weight: 600; }
-        .section-header { background: #667eea; color: white; font-weight: 700; }
-        .total-row { background: #f8f9fa; font-weight: 700; border-top: 2px solid #667eea; }
+        .section-header { background: #e4002b; color: white; font-weight: 700; }
+        .total-row { background: #f8f9fa; font-weight: 700; border-top: 2px solid #e4002b; }
         .chart-container { position: relative; height: 400px; margin-top: 20px; }
-        .btn { padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.3s; }
-        .btn:hover { background: #5568d3; }
-        .milestone { padding: 15px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #667eea; border-radius: 6px; margin-bottom: 15px; }
+        .btn { padding: 12px 24px; background: #e4002b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.3s; }
+        .btn:hover { background: #b8001f; }
+        .milestone { padding: 15px; background: linear-gradient(135deg, #e4002b15 0%, #b8001f15 100%); border-left: 4px solid #e4002b; border-radius: 6px; margin-bottom: 15px; }
         .table-wrapper { overflow-x: auto; max-height: 600px; overflow-y: auto; }
     </style>
 </head>
@@ -270,317 +270,7 @@
     </div>
 
     <script>
-        let scenario = 'base';
-        let data = {};
-        let charts = {};
-        
-        function switchTab(tab) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById(tab).classList.add('active');
-            if (tab === 'charts') setTimeout(renderCharts, 100);
-        }
-        
-        function switchScenario(s) {
-            scenario = s;
-            document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            if (s === 'base') {
-                document.getElementById('retention').value = 60;
-                document.getElementById('cacImp').value = 0;
-                document.getElementById('mrpuGrowth').value = 3;
-                document.getElementById('cacFloor').value = 35;
-            } else {
-                document.getElementById('retention').value = 70;
-                document.getElementById('cacImp').value = 5;
-                document.getElementById('mrpuGrowth').value = 5;
-                document.getElementById('cacFloor').value = 30;
-            }
-            calc();
-        }
-        
-        function getVal(id) { return parseFloat(document.getElementById(id).value) || 0; }
-        
-        function calc() {
-            const p = {
-                users: getVal('startUsers'),
-                mrpu: getVal('startMRPU'),
-                mrpuGr: getVal('mrpuGrowth') / 100,
-                mrpuCap: getVal('mrpuCap'),
-                ret: getVal('retention') / 100,
-                mkt: getVal('mktBudget'),
-                cac: getVal('startCAC'),
-                cacImp: getVal('cacImp') / 100,
-                cacFloor: getVal('cacFloor'),
-                payroll: getVal('payroll'),
-                gna: getVal('gna'),
-                tech: getVal('tech'),
-                kyc: getVal('kyc'),
-                affPlat: getVal('affPlat') * getVal('eurUsd'),
-                affEmp: getVal('affEmp') * getVal('eurUsd'),
-                csPayroll: getVal('csPayroll'),
-                csTax: getVal('csTax') / 100,
-                csTools: getVal('csTools'),
-                payFee: getVal('payFee') / 100,
-                depRatio: getVal('depRatio'),
-                betbyFee: getVal('betbyFee') / 100,
-                casinoFee: getVal('casinoFee') / 100,
-                sbSplit: getVal('sbSplit') / 100,
-                eurUsd: getVal('eurUsd')
-            };
-            
-            const months = ['Nov-25', 'Dec-25', 'Jan-26', 'Feb-26', 'Mar-26', 'Apr-26', 'May-26', 
-                          'Jun-26', 'Jul-26', 'Aug-26', 'Sep-26', 'Oct-26', 'Nov-26', 'Dec-26'];
-            
-            data = { months: [], users: [], ggr: [], netRev: [], ebitda: [], cashFlow: 0, newUsers: [], cacs: [] };
-            let cumGGR = 0;
-            let currentMRPU = p.mrpu;
-            let currentCAC = p.cac;
-            
-            for (let i = 0; i < 14; i++) {
-                const m = months[i];
-                const isNov = i === 0;
-                const isDec = i === 1;
-                
-                // MRPU growth
-                if (currentMRPU < p.mrpuCap) {
-                    currentMRPU = Math.min(currentMRPU * (1 + p.mrpuGr), p.mrpuCap);
-                }
-                
-                // CAC improvement
-                if (i > 0) {
-                    currentCAC = Math.max(currentCAC * (1 - p.cacImp), p.cacFloor);
-                }
-                
-                // Users
-                const retainedUsers = i === 0 ? p.users : Math.floor(data.users[i-1] * p.ret);
-                const newUsers = Math.floor(p.mkt / currentCAC);
-                const totalUsers = retainedUsers + newUsers;
-                
-                // Revenue
-                const ggr = totalUsers * currentMRPU;
-                cumGGR += ggr;
-                const sbGGR = ggr * p.sbSplit;
-                const casinoGGR = ggr * (1 - p.sbSplit);
-                
-                // Provider fees
-                const betbyFee = sbGGR * p.betbyFee;
-                const casinoProvFee = casinoGGR * p.casinoFee;
-                const flexsyRate = cumGGR < 500000 ? 0.04 : 0.03;
-                let flexsyFee = ggr * flexsyRate;
-                
-                // Flexsy minimum
-                if (i >= 3 && i <= 5) flexsyFee = Math.max(flexsyFee, 2000 * p.eurUsd);
-                if (i >= 6 && i <= 8) flexsyFee = Math.max(flexsyFee, 4000 * p.eurUsd);
-                if (i >= 9 && i <= 11) flexsyFee = Math.max(flexsyFee, 6000 * p.eurUsd);
-                if (i >= 12) flexsyFee = Math.max(flexsyFee, 12000 * p.eurUsd);
-                
-                const gamingtecFee = isDec ? 2000 : 0;
-                const totalProvFees = betbyFee + casinoProvFee + flexsyFee + gamingtecFee;
-                
-                // Payment processing
-                const deposits = ggr * p.depRatio;
-                const withdrawals = deposits;
-                const txnVol = deposits + withdrawals;
-                const paymentFee = txnVol * p.payFee;
-                
-                const netRev = ggr - totalProvFees - paymentFee;
-                
-                // Fixed costs
-                let fixedCosts = p.payroll + p.gna + p.tech + p.kyc + p.affPlat + p.affEmp + p.mkt;
-                
-                // CS center starts Jan 2026
-                if (i >= 2) {
-                    fixedCosts += p.csPayroll * (1 + p.csTax) + p.csTools;
-                }
-                
-                // One-time Dec payment
-                const oneTime = isDec ? 12589.31 : 0;
-                
-                const ebitda = netRev - fixedCosts - oneTime;
-                data.cashFlow += ebitda;
-                
-                data.months.push(m);
-                data.users.push(totalUsers);
-                data.ggr.push(ggr);
-                data.netRev.push(netRev);
-                data.ebitda.push(ebitda);
-                data.newUsers.push(newUsers);
-                data.cacs.push(currentCAC);
-            }
-            
-            updateDashboard();
-            updatePL();
-        }
-        
-        function updateDashboard() {
-            const last = data.months.length - 1;
-            document.getElementById('totalUsers').textContent = data.users[last].toLocaleString();
-            document.getElementById('monthlyRevenue').textContent = '$' + data.netRev[last].toLocaleString(undefined, {maximumFractionDigits: 0});
-            
-            const annualRev = data.netRev.slice(2).reduce((a,b) => a+b, 0);
-            document.getElementById('annualRevenue').textContent = '$' + annualRev.toLocaleString(undefined, {maximumFractionDigits: 0});
-            
-            const ebitda = data.ebitda[last];
-            document.getElementById('ebitda').textContent = '$' + ebitda.toLocaleString(undefined, {maximumFractionDigits: 0});
-            const ebitdaCard = document.getElementById('ebitdaCard');
-            ebitdaCard.className = 'metric-card ' + (ebitda > 0 ? 'positive' : 'negative');
-            
-            const avgMRPU = data.netRev[last] / data.users[last];
-            const avgCAC = data.cacs[last];
-            const ret = getVal('retention') / 100;
-            const ltv = avgMRPU / (1 - ret);
-            const ltvCac = ltv / avgCAC;
-            document.getElementById('ltvCac').textContent = ltvCac.toFixed(2);
-            
-            let breakEven = 'Not reached';
-            let cumCash = 0;
-            for (let i = 0; i < data.ebitda.length; i++) {
-                cumCash += data.ebitda[i];
-                if (cumCash > 0 && breakEven === 'Not reached') {
-                    breakEven = data.months[i];
-                    break;
-                }
-            }
-            document.getElementById('breakEven').textContent = breakEven;
-            
-            const milestones = [];
-            if (breakEven !== 'Not reached') {
-                milestones.push(`<div class="milestone"><h4>💰 Break-Even: ${breakEven}</h4></div>`);
-            }
-            if (data.users[last] >= 1000) {
-                const idx = data.users.findIndex(u => u >= 1000);
-                if (idx >= 0) milestones.push(`<div class="milestone"><h4>👥 1,000 Users: ${data.months[idx]}</h4></div>`);
-            }
-            if (annualRev >= 1000000) {
-                milestones.push(`<div class="milestone"><h4>📈 $1M Annual Revenue Achieved</h4></div>`);
-            }
-            document.getElementById('milestones').innerHTML = milestones.join('') || '<p>No major milestones reached in forecast period</p>';
-            
-            renderGrowthChart();
-        }
-        
-        function updatePL() {
-            let html = '<tr class="section-header"><th>Line Item</th>';
-            data.months.forEach(m => html += `<th>${m}</th>`);
-            html += '</tr>';
-            
-            const fmt = (n) => '$' + n.toLocaleString(undefined, {maximumFractionDigits: 0});
-            
-            html += '<tr><td>Active Users</td>';
-            data.users.forEach(u => html += `<td>${u.toLocaleString()}</td>`);
-            html += '</tr>';
-            
-            html += '<tr><td>GGR</td>';
-            data.ggr.forEach(g => html += `<td>${fmt(g)}</td>`);
-            html += '</tr>';
-            
-            html += '<tr class="total-row"><td>Net Revenue</td>';
-            data.netRev.forEach(r => html += `<td>${fmt(r)}</td>`);
-            html += '</tr>';
-            
-            html += '<tr class="total-row"><td>EBITDA</td>';
-            data.ebitda.forEach(e => html += `<td>${fmt(e)}</td>`);
-            html += '</tr>';
-            
-            document.getElementById('plTable').innerHTML = html;
-        }
-        
-        function renderGrowthChart() {
-            const ctx = document.getElementById('growthChart');
-            if (charts.growth) charts.growth.destroy();
-            
-            charts.growth = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: data.months,
-                    datasets: [{
-                        label: 'Users',
-                        data: data.users,
-                        borderColor: '#667eea',
-                        yAxisID: 'y'
-                    }, {
-                        label: 'Net Revenue',
-                        data: data.netRev,
-                        borderColor: '#27ae60',
-                        yAxisID: 'y1'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { position: 'left', title: { display: true, text: 'Users' }},
-                        y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Revenue ($)' }}
-                    }
-                }
-            });
-        }
-        
-        function renderCharts() {
-            renderGrowthChart();
-            
-            const ctx2 = document.getElementById('profitChart');
-            if (charts.profit) charts.profit.destroy();
-            let cumCash = [];
-            let sum = 0;
-            data.ebitda.forEach(e => { sum += e; cumCash.push(sum); });
-            
-            charts.profit = new Chart(ctx2, {
-                type: 'bar',
-                data: {
-                    labels: data.months,
-                    datasets: [{
-                        label: 'Monthly EBITDA',
-                        data: data.ebitda,
-                        backgroundColor: '#667eea',
-                        yAxisID: 'y'
-                    }, {
-                        label: 'Cumulative Cash',
-                        data: cumCash,
-                        type: 'line',
-                        borderColor: '#27ae60',
-                        yAxisID: 'y'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { title: { display: true, text: 'Amount ($)' }}
-                    }
-                }
-            });
-            
-            const ctx3 = document.getElementById('userChart');
-            if (charts.user) charts.user.destroy();
-            
-            charts.user = new Chart(ctx3, {
-                type: 'bar',
-                data: {
-                    labels: data.months,
-                    datasets: [{
-                        label: 'Total Users',
-                        data: data.users,
-                        backgroundColor: '#667eea'
-                    }, {
-                        label: 'New Users',
-                        data: data.newUsers,
-                        backgroundColor: '#27ae60'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { stacked: false }
-                    }
-                }
-            });
-        }
-        
-        calc();
+        let scenario='base',data={},charts={};function switchTab(t){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));event.target.classList.add('active');document.getElementById(t).classList.add('active');if(t==='charts')setTimeout(renderCharts,100)}function switchScenario(s){scenario=s;document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');if(s==='base'){document.getElementById('retention').value=60;document.getElementById('cacImp').value=0;document.getElementById('mrpuGrowth').value=3;document.getElementById('cacFloor').value=35}else{document.getElementById('retention').value=70;document.getElementById('cacImp').value=5;document.getElementById('mrpuGrowth').value=5;document.getElementById('cacFloor').value=30}calc()}function getVal(id){return parseFloat(document.getElementById(id).value)||0}function calc(){const p={users:getVal('startUsers'),mrpu:getVal('startMRPU'),mrpuGr:getVal('mrpuGrowth')/100,mrpuCap:getVal('mrpuCap'),ret:getVal('retention')/100,mkt:getVal('mktBudget'),cac:getVal('startCAC'),cacImp:getVal('cacImp')/100,cacFloor:getVal('cacFloor'),payroll:getVal('payroll'),gna:getVal('gna'),tech:getVal('tech'),kyc:getVal('kyc'),affPlat:getVal('affPlat')*getVal('eurUsd'),affEmp:getVal('affEmp')*getVal('eurUsd'),csPayroll:getVal('csPayroll'),csTax:getVal('csTax')/100,csTools:getVal('csTools'),payFee:getVal('payFee')/100,depRatio:getVal('depRatio'),betbyFee:getVal('betbyFee')/100,casinoFee:getVal('casinoFee')/100,sbSplit:getVal('sbSplit')/100,eurUsd:getVal('eurUsd')};const months=['Nov-25','Dec-25','Jan-26','Feb-26','Mar-26','Apr-26','May-26','Jun-26','Jul-26','Aug-26','Sep-26','Oct-26','Nov-26','Dec-26'];data={months:[],users:[],ggr:[],netRev:[],ebitda:[],cashFlow:0,newUsers:[],cacs:[]};let cumGGR=0,currentMRPU=p.mrpu,currentCAC=p.cac;for(let i=0;i<14;i++){const m=months[i],isDec=i===1;if(currentMRPU<p.mrpuCap)currentMRPU=Math.min(currentMRPU*(1+p.mrpuGr),p.mrpuCap);if(i>0)currentCAC=Math.max(currentCAC*(1-p.cacImp),p.cacFloor);const retainedUsers=i===0?p.users:Math.floor(data.users[i-1]*p.ret),newUsers=Math.floor(p.mkt/currentCAC),totalUsers=retainedUsers+newUsers,ggr=totalUsers*currentMRPU;cumGGR+=ggr;const sbGGR=ggr*p.sbSplit,casinoGGR=ggr*(1-p.sbSplit),betbyFee=sbGGR*p.betbyFee,casinoProvFee=casinoGGR*p.casinoFee,flexsyRate=cumGGR<500000?0.04:0.03;let flexsyFee=ggr*flexsyRate;if(i>=3&&i<=5)flexsyFee=Math.max(flexsyFee,2000*p.eurUsd);if(i>=6&&i<=8)flexsyFee=Math.max(flexsyFee,4000*p.eurUsd);if(i>=9&&i<=11)flexsyFee=Math.max(flexsyFee,6000*p.eurUsd);if(i>=12)flexsyFee=Math.max(flexsyFee,12000*p.eurUsd);const gamingtecFee=isDec?2000:0,totalProvFees=betbyFee+casinoProvFee+flexsyFee+gamingtecFee,deposits=ggr*p.depRatio,txnVol=deposits*2,paymentFee=txnVol*p.payFee,netRev=ggr-totalProvFees-paymentFee;let fixedCosts=p.payroll+p.gna+p.tech+p.kyc+p.affPlat+p.affEmp+p.mkt;if(i>=2)fixedCosts+=p.csPayroll*(1+p.csTax)+p.csTools;const oneTime=isDec?12589.31:0,ebitda=netRev-fixedCosts-oneTime;data.cashFlow+=ebitda;data.months.push(m);data.users.push(totalUsers);data.ggr.push(ggr);data.netRev.push(netRev);data.ebitda.push(ebitda);data.newUsers.push(newUsers);data.cacs.push(currentCAC)}updateDashboard();updatePL()}function updateDashboard(){const last=data.months.length-1;document.getElementById('totalUsers').textContent=data.users[last].toLocaleString();document.getElementById('monthlyRevenue').textContent='$'+data.netRev[last].toLocaleString(undefined,{maximumFractionDigits:0});const annualRev=data.netRev.slice(2).reduce((a,b)=>a+b,0);document.getElementById('annualRevenue').textContent='$'+annualRev.toLocaleString(undefined,{maximumFractionDigits:0});const ebitda=data.ebitda[last];document.getElementById('ebitda').textContent='$'+ebitda.toLocaleString(undefined,{maximumFractionDigits:0});const ebitdaCard=document.getElementById('ebitdaCard');ebitdaCard.className='metric-card '+(ebitda>0?'positive':'negative');const avgMRPU=data.netRev[last]/data.users[last],avgCAC=data.cacs[last],ret=getVal('retention')/100,ltv=avgMRPU/(1-ret),ltvCac=ltv/avgCAC;document.getElementById('ltvCac').textContent=ltvCac.toFixed(2);let breakEven='Not reached',cumCash=0;for(let i=0;i<data.ebitda.length;i++){cumCash+=data.ebitda[i];if(cumCash>0&&breakEven==='Not reached'){breakEven=data.months[i];break}}document.getElementById('breakEven').textContent=breakEven;const milestones=[];if(breakEven!=='Not reached')milestones.push(`<div class="milestone"><h4>💰 Break-Even: ${breakEven}</h4></div>`);if(data.users[last]>=1000){const idx=data.users.findIndex(u=>u>=1000);if(idx>=0)milestones.push(`<div class="milestone"><h4>👥 1,000 Users: ${data.months[idx]}</h4></div>`)}if(annualRev>=1000000)milestones.push(`<div class="milestone"><h4>📈 $1M Annual Revenue Achieved</h4></div>`);document.getElementById('milestones').innerHTML=milestones.join('')||'<p>No major milestones reached in forecast period</p>';renderGrowthChart()}function updatePL(){let html='<tr class="section-header"><th>Line Item</th>';data.months.forEach(m=>html+=`<th>${m}</th>`);html+='</tr>';const fmt=n=>'$'+n.toLocaleString(undefined,{maximumFractionDigits:0});html+='<tr><td>Active Users</td>';data.users.forEach(u=>html+=`<td>${u.toLocaleString()}</td>`);html+='</tr><tr><td>GGR</td>';data.ggr.forEach(g=>html+=`<td>${fmt(g)}</td>`);html+='</tr><tr class="total-row"><td>Net Revenue</td>';data.netRev.forEach(r=>html+=`<td>${fmt(r)}</td>`);html+='</tr><tr class="total-row"><td>EBITDA</td>';data.ebitda.forEach(e=>html+=`<td>${fmt(e)}</td>`);html+='</tr>';document.getElementById('plTable').innerHTML=html}function renderGrowthChart(){const ctx=document.getElementById('growthChart');if(charts.growth)charts.growth.destroy();charts.growth=new Chart(ctx,{type:'line',data:{labels:data.months,datasets:[{label:'Users',data:data.users,borderColor:'#e4002b',backgroundColor:'rgba(228,0,43,0.1)',yAxisID:'y'},{label:'Net Revenue',data:data.netRev,borderColor:'#53565a',backgroundColor:'rgba(83,86,90,0.1)',yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:10,right:10,top:20,bottom:10}},scales:{y:{position:'left',title:{display:true,text:'Users'},beginAtZero:true},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Revenue ($)'},beginAtZero:true}}}})}function renderCharts(){renderGrowthChart();const ctx2=document.getElementById('profitChart');if(charts.profit)charts.profit.destroy();let cumCash=[],sum=0;data.ebitda.forEach(e=>{sum+=e;cumCash.push(sum)});charts.profit=new Chart(ctx2,{type:'bar',data:{labels:data.months,datasets:[{label:'Monthly EBITDA',data:data.ebitda,backgroundColor:'#e4002b',yAxisID:'y'},{label:'Cumulative Cash',data:cumCash,type:'line',borderColor:'#53565a',backgroundColor:'rgba(83,86,90,0.1)',yAxisID:'y'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:10,right:10,top:20,bottom:10}},scales:{y:{title:{display:true,text:'Amount ($)'},beginAtZero:false}}}});const ctx3=document.getElementById('userChart');if(charts.user)charts.user.destroy();charts.user=new Chart(ctx3,{type:'bar',data:{labels:data.months,datasets:[{label:'Total Users',data:data.users,backgroundColor:'#e4002b'},{label:'New Users',data:data.newUsers,backgroundColor:'#53565a'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:10,right:10,top:20,bottom:10}},scales:{y:{stacked:false,beginAtZero:true}}}})}calc();
     </script>
 </body>
 </html>
