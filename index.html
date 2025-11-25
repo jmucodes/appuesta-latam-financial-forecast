@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Appuesta LATAM - Financial Forecast Model v1</title>
+    <title>Appuesta LATAM - Financial Forecast Model v2</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -38,22 +38,26 @@
         table th { background: #f8f9fa; padding: 10px 6px; text-align: right; font-weight: 600; border-bottom: 2px solid #e0e6ed; color: #53565a; }
         table th:first-child { text-align: left; }
         table td { padding: 8px 6px; text-align: right; border-bottom: 1px solid #f0f0f0; }
-        table td:first-child { text-align: left; font-weight: 600; }
-        .section-header { background: #e4002b; color: white !important; font-weight: 700; }
-        .section-header th { color: white !important; }
-        .total-row { background: #f8f9fa; font-weight: 700; border-top: 2px solid #e4002b; }
+        table td:first-child { text-align: left; font-weight: 500; }
+        .section-header td { background: #e4002b; color: white !important; font-weight: 700; }
+        .subsection-header td { background: #f8f9fa; font-weight: 600; color: #53565a; }
+        .total-row td { background: #fff3f5; font-weight: 700; border-top: 2px solid #e4002b; }
+        .subtotal-row td { background: #fafafa; font-weight: 600; }
+        .indent { padding-left: 20px !important; }
         .chart-container { position: relative; height: 400px; margin-top: 20px; }
         .btn { padding: 12px 24px; background: #e4002b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: background 0.3s; }
         .btn:hover { background: #b8001f; }
         .milestone { padding: 15px; background: linear-gradient(135deg, #e4002b15 0%, #b8001f15 100%); border-left: 4px solid #e4002b; border-radius: 6px; margin-bottom: 15px; }
-        .table-wrapper { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+        .table-wrapper { overflow-x: auto; max-height: 800px; overflow-y: auto; }
+        .negative-value { color: #e4002b; }
+        .positive-value { color: #27ae60; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🎰 Appuesta LATAM - Financial Forecast</h1>
-            <p>December 2025 - December 2026</p>
+            <p>November 2025 - December 2026 | Version 2</p>
         </div>
         
         <div class="scenario-toggle">
@@ -159,6 +163,17 @@
             </div>
             
             <div class="card">
+                <h2>Bonus & Promotions</h2>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>Bonus Cost (% of GGR)</label>
+                        <input type="number" id="bonusCost" value="20" step="0.5">
+                        <small>Player bonuses, free bets, promotions</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
                 <h2>Fixed Costs (Monthly $)</h2>
                 <div class="input-grid">
                     <div class="input-group">
@@ -241,7 +256,7 @@
         
         <div id="pl" class="tab-content">
             <div class="card">
-                <h2>P&L Statement</h2>
+                <h2>Profit & Loss Statement (Detailed)</h2>
                 <div class="table-wrapper">
                     <table id="plTable"></table>
                 </div>
@@ -271,7 +286,645 @@
     </div>
 
     <script>
-        let scenario='base',data={},charts={};function switchTab(t){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));event.target.classList.add('active');document.getElementById(t).classList.add('active');if(t==='charts')setTimeout(renderCharts,100)}function switchScenario(s){scenario=s;document.querySelectorAll('.scenario-btn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active');if(s==='base'){document.getElementById('retention').value=60;document.getElementById('cacImp').value=0;document.getElementById('mrpuGrowth').value=3;document.getElementById('cacFloor').value=35}else{document.getElementById('retention').value=70;document.getElementById('cacImp').value=5;document.getElementById('mrpuGrowth').value=5;document.getElementById('cacFloor').value=30}calc()}function getVal(id){return parseFloat(document.getElementById(id).value)||0}function calc(){const p={users:getVal('startUsers'),mrpu:getVal('startMRPU'),mrpuGr:getVal('mrpuGrowth')/100,mrpuCap:getVal('mrpuCap'),ret:getVal('retention')/100,mkt:getVal('mktBudget'),cac:getVal('startCAC'),cacImp:getVal('cacImp')/100,cacFloor:getVal('cacFloor'),payroll:getVal('payroll'),gna:getVal('gna'),tech:getVal('tech'),kyc:getVal('kyc'),affPlat:getVal('affPlat')*getVal('eurUsd'),affEmp:getVal('affEmp')*getVal('eurUsd'),csPayroll:getVal('csPayroll'),csTax:getVal('csTax')/100,csTools:getVal('csTools'),payFee:getVal('payFee')/100,depRatio:getVal('depRatio'),betbyFee:getVal('betbyFee')/100,casinoFee:getVal('casinoFee')/100,sbSplit:getVal('sbSplit')/100,eurUsd:getVal('eurUsd')};const months=['Nov-25','Dec-25','Jan-26','Feb-26','Mar-26','Apr-26','May-26','Jun-26','Jul-26','Aug-26','Sep-26','Oct-26','Nov-26','Dec-26'];data={months:[],users:[],ggr:[],netRev:[],ebitda:[],cashFlow:0,newUsers:[],cacs:[]};let cumGGR=0,currentMRPU=p.mrpu,currentCAC=p.cac;for(let i=0;i<14;i++){const m=months[i],isDec=i===1;if(currentMRPU<p.mrpuCap)currentMRPU=Math.min(currentMRPU*(1+p.mrpuGr),p.mrpuCap);if(i>0)currentCAC=Math.max(currentCAC*(1-p.cacImp),p.cacFloor);const retainedUsers=i===0?p.users:Math.floor(data.users[i-1]*p.ret),newUsers=Math.floor(p.mkt/currentCAC),totalUsers=retainedUsers+newUsers,ggr=totalUsers*currentMRPU;cumGGR+=ggr;const sbGGR=ggr*p.sbSplit,casinoGGR=ggr*(1-p.sbSplit),betbyFee=sbGGR*p.betbyFee,casinoProvFee=casinoGGR*p.casinoFee,flexsyRate=cumGGR<500000?0.04:0.03;let flexsyFee=ggr*flexsyRate;if(i>=3&&i<=5)flexsyFee=Math.max(flexsyFee,2000*p.eurUsd);if(i>=6&&i<=8)flexsyFee=Math.max(flexsyFee,4000*p.eurUsd);if(i>=9&&i<=11)flexsyFee=Math.max(flexsyFee,6000*p.eurUsd);if(i>=12)flexsyFee=Math.max(flexsyFee,12000*p.eurUsd);const gamingtecFee=isDec?2000:0,totalProvFees=betbyFee+casinoProvFee+flexsyFee+gamingtecFee,deposits=ggr*p.depRatio,txnVol=deposits*2,paymentFee=txnVol*p.payFee,netRev=ggr-totalProvFees-paymentFee;let fixedCosts=p.payroll+p.gna+p.tech+p.kyc+p.affPlat+p.affEmp+p.mkt;if(i>=2)fixedCosts+=p.csPayroll*(1+p.csTax)+p.csTools;const oneTime=isDec?12589.31:0,ebitda=netRev-fixedCosts-oneTime;data.cashFlow+=ebitda;data.months.push(m);data.users.push(totalUsers);data.ggr.push(ggr);data.netRev.push(netRev);data.ebitda.push(ebitda);data.newUsers.push(newUsers);data.cacs.push(currentCAC)}updateDashboard();updatePL()}function updateDashboard(){const last=data.months.length-1;document.getElementById('totalUsers').textContent=data.users[last].toLocaleString();document.getElementById('monthlyRevenue').textContent='$'+data.netRev[last].toLocaleString(undefined,{maximumFractionDigits:0});const annualRev=data.netRev.slice(2).reduce((a,b)=>a+b,0);document.getElementById('annualRevenue').textContent='$'+annualRev.toLocaleString(undefined,{maximumFractionDigits:0});const ebitda=data.ebitda[last];document.getElementById('ebitda').textContent='$'+ebitda.toLocaleString(undefined,{maximumFractionDigits:0});const ebitdaCard=document.getElementById('ebitdaCard');ebitdaCard.className='metric-card '+(ebitda>0?'positive':'negative');const avgMRPU=data.netRev[last]/data.users[last],avgCAC=data.cacs[last],ret=getVal('retention')/100,ltv=avgMRPU/(1-ret),ltvCac=ltv/avgCAC;document.getElementById('ltvCac').textContent=ltvCac.toFixed(2);let breakEven='Not reached',cumCash=0;for(let i=0;i<data.ebitda.length;i++){cumCash+=data.ebitda[i];if(cumCash>0&&breakEven==='Not reached'){breakEven=data.months[i];break}}document.getElementById('breakEven').textContent=breakEven;const milestones=[];if(breakEven!=='Not reached')milestones.push(`<div class="milestone"><h4>💰 Break-Even: ${breakEven}</h4></div>`);if(data.users[last]>=1000){const idx=data.users.findIndex(u=>u>=1000);if(idx>=0)milestones.push(`<div class="milestone"><h4>👥 1,000 Users: ${data.months[idx]}</h4></div>`)}if(annualRev>=1000000)milestones.push(`<div class="milestone"><h4>📈 $1M Annual Revenue Achieved</h4></div>`);document.getElementById('milestones').innerHTML=milestones.join('')||'<p>No major milestones reached in forecast period</p>';renderGrowthChart()}function updatePL(){let html='<tr style="background:#f8f9fa;color:#53565a;font-weight:700;"><th style="color:#53565a;">Line Item</th>';data.months.forEach(m=>html+=`<th style="color:#53565a;">${m}</th>`);html+='</tr>';const fmt=n=>'$'+n.toLocaleString(undefined,{maximumFractionDigits:0});html+='<tr><td>Active Users</td>';data.users.forEach(u=>html+=`<td>${u.toLocaleString()}</td>`);html+='</tr><tr><td>GGR</td>';data.ggr.forEach(g=>html+=`<td>${fmt(g)}</td>`);html+='</tr><tr class="total-row"><td>Net Revenue</td>';data.netRev.forEach(r=>html+=`<td>${fmt(r)}</td>`);html+='</tr><tr class="total-row"><td>EBITDA</td>';data.ebitda.forEach(e=>html+=`<td>${fmt(e)}</td>`);html+='</tr>';document.getElementById('plTable').innerHTML=html}function renderGrowthChart(){const ctx=document.getElementById('growthChart');if(charts.growth)charts.growth.destroy();charts.growth=new Chart(ctx,{type:'line',data:{labels:data.months,datasets:[{label:'Users',data:data.users,borderColor:'#e4002b',backgroundColor:'rgba(228,0,43,0.1)',yAxisID:'y'},{label:'Net Revenue',data:data.netRev,borderColor:'#53565a',backgroundColor:'rgba(83,86,90,0.1)',yAxisID:'y1'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:10,right:10,top:20,bottom:10}},scales:{y:{position:'left',title:{display:true,text:'Users'},beginAtZero:true},y1:{position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Revenue ($)'},beginAtZero:true}}}})}function renderCharts(){renderGrowthChart();const ctx2=document.getElementById('profitChart');if(charts.profit)charts.profit.destroy();let cumCash=[],sum=0;data.ebitda.forEach(e=>{sum+=e;cumCash.push(sum)});charts.profit=new Chart(ctx2,{type:'bar',data:{labels:data.months,datasets:[{label:'Monthly EBITDA',data:data.ebitda,backgroundColor:'#e4002b',yAxisID:'y'},{label:'Cumulative Cash',data:cumCash,type:'line',borderColor:'#53565a',backgroundColor:'rgba(83,86,90,0.1)',yAxisID:'y'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:10,right:10,top:20,bottom:10}},scales:{y:{title:{display:true,text:'Amount ($)'},beginAtZero:false}}}});const ctx3=document.getElementById('userChart');if(charts.user)charts.user.destroy();charts.user=new Chart(ctx3,{type:'bar',data:{labels:data.months,datasets:[{label:'Total Users',data:data.users,backgroundColor:'#e4002b'},{label:'New Users',data:data.newUsers,backgroundColor:'#53565a'}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:10,right:10,top:20,bottom:10}},scales:{y:{stacked:false,beginAtZero:true}}}})}calc();
+        let scenario = 'base';
+        let data = {};
+        let charts = {};
+        let detailedData = {};
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById(t).classList.add('active');
+            if (t === 'charts') {
+                setTimeout(renderCharts, 100);
+            }
+        }
+
+        function switchScenario(s) {
+            scenario = s;
+            document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            if (s === 'base') {
+                document.getElementById('retention').value = 60;
+                document.getElementById('cacImp').value = 0;
+                document.getElementById('mrpuGrowth').value = 3;
+                document.getElementById('cacFloor').value = 35;
+                document.getElementById('bonusCost').value = 20;
+            } else {
+                document.getElementById('retention').value = 70;
+                document.getElementById('cacImp').value = 5;
+                document.getElementById('mrpuGrowth').value = 5;
+                document.getElementById('cacFloor').value = 30;
+                document.getElementById('bonusCost').value = 18;
+            }
+            calc();
+        }
+
+        function getVal(id) {
+            return parseFloat(document.getElementById(id).value) || 0;
+        }
+
+        function calc() {
+            const p = {
+                users: getVal('startUsers'),
+                mrpu: getVal('startMRPU'),
+                mrpuGr: getVal('mrpuGrowth') / 100,
+                mrpuCap: getVal('mrpuCap'),
+                ret: getVal('retention') / 100,
+                mkt: getVal('mktBudget'),
+                cac: getVal('startCAC'),
+                cacImp: getVal('cacImp') / 100,
+                cacFloor: getVal('cacFloor'),
+                bonusCost: getVal('bonusCost') / 100,
+                payroll: getVal('payroll'),
+                gna: getVal('gna'),
+                tech: getVal('tech'),
+                kyc: getVal('kyc'),
+                affPlat: getVal('affPlat') * getVal('eurUsd'),
+                affEmp: getVal('affEmp') * getVal('eurUsd'),
+                csPayroll: getVal('csPayroll'),
+                csTax: getVal('csTax') / 100,
+                csTools: getVal('csTools'),
+                payFee: getVal('payFee') / 100,
+                depRatio: getVal('depRatio'),
+                betbyFee: getVal('betbyFee') / 100,
+                casinoFee: getVal('casinoFee') / 100,
+                sbSplit: getVal('sbSplit') / 100,
+                eurUsd: getVal('eurUsd')
+            };
+
+            const months = ['Nov-25', 'Dec-25', 'Jan-26', 'Feb-26', 'Mar-26', 'Apr-26', 'May-26', 'Jun-26', 'Jul-26', 'Aug-26', 'Sep-26', 'Oct-26', 'Nov-26', 'Dec-26'];
+            
+            data = {
+                months: [],
+                users: [],
+                ggr: [],
+                netRev: [],
+                ebitda: [],
+                cashFlow: 0,
+                newUsers: [],
+                cacs: []
+            };
+
+            detailedData = {
+                retainedUsers: [],
+                newUsers: [],
+                mrpu: [],
+                sbGGR: [],
+                casinoGGR: [],
+                bonusCosts: [],
+                betbyFee: [],
+                casinoProvFee: [],
+                flexsyFee: [],
+                gamingtecFee: [],
+                totalProvFees: [],
+                deposits: [],
+                txnVol: [],
+                paymentFee: [],
+                grossProfit: [],
+                payroll: [],
+                gna: [],
+                tech: [],
+                kyc: [],
+                affPlat: [],
+                affEmp: [],
+                csTotal: [],
+                marketing: [],
+                totalFixedCosts: [],
+                oneTimeCosts: [],
+                cumCash: []
+            };
+
+            let cumGGR = 0;
+            let currentMRPU = p.mrpu;
+            let currentCAC = p.cac;
+            let cumCash = 0;
+
+            for (let i = 0; i < 14; i++) {
+                const m = months[i];
+                const isDec = i === 1;
+
+                // MRPU growth with cap
+                if (i > 0 && currentMRPU < p.mrpuCap) {
+                    currentMRPU = Math.min(currentMRPU * (1 + p.mrpuGr), p.mrpuCap);
+                }
+
+                // CAC improvement
+                if (i > 0) {
+                    currentCAC = Math.max(currentCAC * (1 - p.cacImp), p.cacFloor);
+                }
+
+                // User calculations
+                const retainedUsers = i === 0 ? p.users : Math.floor(data.users[i - 1] * p.ret);
+                const newUsers = Math.floor(p.mkt / currentCAC);
+                const totalUsers = retainedUsers + newUsers;
+
+                // Revenue calculations
+                const ggr = totalUsers * currentMRPU;
+                cumGGR += ggr;
+
+                const sbGGR = ggr * p.sbSplit;
+                const casinoGGR = ggr * (1 - p.sbSplit);
+
+                // Bonus costs
+                const bonusCosts = ggr * p.bonusCost;
+
+                // Provider fees
+                const betbyFee = sbGGR * p.betbyFee;
+                const casinoProvFee = casinoGGR * p.casinoFee;
+
+                // Flexsy fee with minimums
+                const flexsyRate = cumGGR < 500000 ? 0.04 : 0.03;
+                let flexsyFee = ggr * flexsyRate;
+                if (i >= 3 && i <= 5) flexsyFee = Math.max(flexsyFee, 2000 * p.eurUsd);
+                if (i >= 6 && i <= 8) flexsyFee = Math.max(flexsyFee, 4000 * p.eurUsd);
+                if (i >= 9 && i <= 11) flexsyFee = Math.max(flexsyFee, 6000 * p.eurUsd);
+                if (i >= 12) flexsyFee = Math.max(flexsyFee, 12000 * p.eurUsd);
+
+                const gamingtecFee = isDec ? 2000 : 0;
+                const totalProvFees = betbyFee + casinoProvFee + flexsyFee + gamingtecFee;
+
+                // Payment processing
+                const deposits = ggr * p.depRatio;
+                const txnVol = deposits * 2;
+                const paymentFee = txnVol * p.payFee;
+
+                // Gross profit (after variable costs)
+                const grossProfit = ggr - bonusCosts - totalProvFees - paymentFee;
+
+                // Fixed costs
+                const payroll = p.payroll;
+                const gna = p.gna;
+                const tech = p.tech;
+                const kyc = p.kyc;
+                const affPlat = p.affPlat;
+                const affEmp = p.affEmp;
+                const csTotal = i >= 2 ? p.csPayroll * (1 + p.csTax) + p.csTools : 0;
+                const marketing = p.mkt;
+
+                const totalFixedCosts = payroll + gna + tech + kyc + affPlat + affEmp + csTotal + marketing;
+
+                // One-time costs
+                const oneTimeCosts = isDec ? 12589.31 : 0;
+
+                // Net revenue and EBITDA
+                const netRev = grossProfit;
+                const ebitda = grossProfit - totalFixedCosts - oneTimeCosts;
+
+                cumCash += ebitda;
+
+                // Store main data
+                data.months.push(m);
+                data.users.push(totalUsers);
+                data.ggr.push(ggr);
+                data.netRev.push(netRev);
+                data.ebitda.push(ebitda);
+                data.newUsers.push(newUsers);
+                data.cacs.push(currentCAC);
+
+                // Store detailed data
+                detailedData.retainedUsers.push(retainedUsers);
+                detailedData.newUsers.push(newUsers);
+                detailedData.mrpu.push(currentMRPU);
+                detailedData.sbGGR.push(sbGGR);
+                detailedData.casinoGGR.push(casinoGGR);
+                detailedData.bonusCosts.push(bonusCosts);
+                detailedData.betbyFee.push(betbyFee);
+                detailedData.casinoProvFee.push(casinoProvFee);
+                detailedData.flexsyFee.push(flexsyFee);
+                detailedData.gamingtecFee.push(gamingtecFee);
+                detailedData.totalProvFees.push(totalProvFees);
+                detailedData.deposits.push(deposits);
+                detailedData.txnVol.push(txnVol);
+                detailedData.paymentFee.push(paymentFee);
+                detailedData.grossProfit.push(grossProfit);
+                detailedData.payroll.push(payroll);
+                detailedData.gna.push(gna);
+                detailedData.tech.push(tech);
+                detailedData.kyc.push(kyc);
+                detailedData.affPlat.push(affPlat);
+                detailedData.affEmp.push(affEmp);
+                detailedData.csTotal.push(csTotal);
+                detailedData.marketing.push(marketing);
+                detailedData.totalFixedCosts.push(totalFixedCosts);
+                detailedData.oneTimeCosts.push(oneTimeCosts);
+                detailedData.cumCash.push(cumCash);
+            }
+
+            data.cashFlow = cumCash;
+            updateDashboard();
+            updatePL();
+        }
+
+        function updateDashboard() {
+            const last = data.months.length - 1;
+            
+            document.getElementById('totalUsers').textContent = data.users[last].toLocaleString();
+            document.getElementById('monthlyRevenue').textContent = '$' + data.netRev[last].toLocaleString(undefined, { maximumFractionDigits: 0 });
+            
+            const annualRev = data.netRev.slice(2).reduce((a, b) => a + b, 0);
+            document.getElementById('annualRevenue').textContent = '$' + annualRev.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            
+            const ebitda = data.ebitda[last];
+            document.getElementById('ebitda').textContent = '$' + ebitda.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            
+            const ebitdaCard = document.getElementById('ebitdaCard');
+            ebitdaCard.className = 'metric-card ' + (ebitda > 0 ? 'positive' : 'negative');
+
+            // LTV:CAC calculation
+            const avgMRPU = data.netRev[last] / data.users[last];
+            const avgCAC = data.cacs[last];
+            const ret = getVal('retention') / 100;
+            const ltv = avgMRPU / (1 - ret);
+            const ltvCac = ltv / avgCAC;
+            document.getElementById('ltvCac').textContent = ltvCac.toFixed(2);
+
+            // Break-even calculation
+            let breakEven = 'Not reached';
+            for (let i = 0; i < detailedData.cumCash.length; i++) {
+                if (detailedData.cumCash[i] > 0) {
+                    breakEven = data.months[i];
+                    break;
+                }
+            }
+            document.getElementById('breakEven').textContent = breakEven;
+
+            // Milestones
+            const milestones = [];
+            if (breakEven !== 'Not reached') {
+                milestones.push(`<div class="milestone"><h4>💰 Break-Even: ${breakEven}</h4></div>`);
+            }
+            
+            const idx1000 = data.users.findIndex(u => u >= 1000);
+            if (idx1000 >= 0) {
+                milestones.push(`<div class="milestone"><h4>👥 1,000 Users: ${data.months[idx1000]}</h4></div>`);
+            }
+            
+            if (annualRev >= 1000000) {
+                milestones.push(`<div class="milestone"><h4>📈 $1M Annual Revenue Achieved</h4></div>`);
+            }
+            
+            document.getElementById('milestones').innerHTML = milestones.join('') || '<p>No major milestones reached in forecast period</p>';
+
+            renderGrowthChart();
+        }
+
+        function updatePL() {
+            const fmt = n => {
+                const formatted = '$' + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 0 });
+                return n < 0 ? '(' + formatted + ')' : formatted;
+            };
+            
+            const fmtClass = n => n < 0 ? 'negative-value' : '';
+
+            let html = '<thead><tr style="background:#53565a;color:white;"><th style="color:white;min-width:200px;">Line Item</th>';
+            data.months.forEach(m => html += `<th style="color:white;">${m}</th>`);
+            html += '</tr></thead><tbody>';
+
+            // USERS SECTION
+            html += '<tr class="section-header"><td colspan="' + (data.months.length + 1) + '">👥 USERS</td></tr>';
+            
+            html += '<tr><td class="indent">Retained Users</td>';
+            detailedData.retainedUsers.forEach(u => html += `<td>${u.toLocaleString()}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">New Users</td>';
+            detailedData.newUsers.forEach(u => html += `<td>${u.toLocaleString()}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="subtotal-row"><td>Total Active Users</td>';
+            data.users.forEach(u => html += `<td>${u.toLocaleString()}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">MRPU</td>';
+            detailedData.mrpu.forEach(m => html += `<td>$${m.toFixed(2)}</td>`);
+            html += '</tr>';
+
+            // REVENUE SECTION
+            html += '<tr class="section-header"><td colspan="' + (data.months.length + 1) + '">💰 REVENUE</td></tr>';
+            
+            html += '<tr><td class="indent">Sportsbook GGR</td>';
+            detailedData.sbGGR.forEach(g => html += `<td>${fmt(g)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Casino GGR</td>';
+            detailedData.casinoGGR.forEach(g => html += `<td>${fmt(g)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="subtotal-row"><td>Total GGR</td>';
+            data.ggr.forEach(g => html += `<td>${fmt(g)}</td>`);
+            html += '</tr>';
+
+            // VARIABLE COSTS SECTION
+            html += '<tr class="section-header"><td colspan="' + (data.months.length + 1) + '">📉 VARIABLE COSTS</td></tr>';
+            
+            html += '<tr class="subsection-header"><td>Bonus & Promotions</td>';
+            detailedData.bonusCosts.forEach(c => html += `<td class="${fmtClass(-c)}">${fmt(-c)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="subsection-header"><td>Provider Fees</td><td colspan="' + data.months.length + '"></td></tr>';
+            
+            html += '<tr><td class="indent">Betby (Sportsbook)</td>';
+            detailedData.betbyFee.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Casino Provider</td>';
+            detailedData.casinoProvFee.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Flexsy Platform</td>';
+            detailedData.flexsyFee.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Gamingtec</td>';
+            detailedData.gamingtecFee.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="subtotal-row"><td>Total Provider Fees</td>';
+            detailedData.totalProvFees.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="subsection-header"><td>Payment Processing</td><td colspan="' + data.months.length + '"></td></tr>';
+            
+            html += '<tr><td class="indent">Deposits Volume</td>';
+            detailedData.deposits.forEach(d => html += `<td>${fmt(d)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Transaction Volume</td>';
+            detailedData.txnVol.forEach(t => html += `<td>${fmt(t)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Payment Fees</td>';
+            detailedData.paymentFee.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+
+            // GROSS PROFIT
+            html += '<tr class="total-row"><td>GROSS PROFIT</td>';
+            detailedData.grossProfit.forEach(g => html += `<td class="${fmtClass(g)}">${fmt(g)}</td>`);
+            html += '</tr>';
+
+            // FIXED COSTS SECTION
+            html += '<tr class="section-header"><td colspan="' + (data.months.length + 1) + '">🏢 FIXED COSTS</td></tr>';
+            
+            html += '<tr><td class="indent">Payroll</td>';
+            detailedData.payroll.forEach(p => html += `<td class="${fmtClass(-p)}">${fmt(-p)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">G&A</td>';
+            detailedData.gna.forEach(g => html += `<td class="${fmtClass(-g)}">${fmt(-g)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Tech Services</td>';
+            detailedData.tech.forEach(t => html += `<td class="${fmtClass(-t)}">${fmt(-t)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">KYC</td>';
+            detailedData.kyc.forEach(k => html += `<td class="${fmtClass(-k)}">${fmt(-k)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Affiliate Platform</td>';
+            detailedData.affPlat.forEach(a => html += `<td class="${fmtClass(-a)}">${fmt(-a)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Affiliate Employee</td>';
+            detailedData.affEmp.forEach(a => html += `<td class="${fmtClass(-a)}">${fmt(-a)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">CS Center</td>';
+            detailedData.csTotal.forEach(c => html += `<td class="${fmtClass(-c)}">${fmt(-c)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">Marketing</td>';
+            detailedData.marketing.forEach(m => html += `<td class="${fmtClass(-m)}">${fmt(-m)}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="subtotal-row"><td>Total Fixed Costs</td>';
+            detailedData.totalFixedCosts.forEach(f => html += `<td class="${fmtClass(-f)}">${fmt(-f)}</td>`);
+            html += '</tr>';
+
+            // ONE-TIME COSTS
+            html += '<tr><td>One-Time Costs</td>';
+            detailedData.oneTimeCosts.forEach(o => html += `<td class="${fmtClass(-o)}">${fmt(-o)}</td>`);
+            html += '</tr>';
+
+            // EBITDA
+            html += '<tr class="total-row"><td>EBITDA</td>';
+            data.ebitda.forEach(e => html += `<td class="${fmtClass(e)}">${fmt(e)}</td>`);
+            html += '</tr>';
+
+            // CUMULATIVE CASH
+            html += '<tr class="total-row"><td>Cumulative Cash Flow</td>';
+            detailedData.cumCash.forEach(c => html += `<td class="${fmtClass(c)}">${fmt(c)}</td>`);
+            html += '</tr>';
+
+            html += '</tbody>';
+            document.getElementById('plTable').innerHTML = html;
+        }
+
+        function renderGrowthChart() {
+            const ctx = document.getElementById('growthChart');
+            if (charts.growth) charts.growth.destroy();
+            
+            charts.growth = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.months,
+                    datasets: [{
+                        label: 'Users',
+                        data: data.users,
+                        borderColor: '#e4002b',
+                        backgroundColor: 'rgba(228,0,43,0.1)',
+                        yAxisID: 'y',
+                        tension: 0.3
+                    }, {
+                        label: 'Gross Profit',
+                        data: detailedData.grossProfit,
+                        borderColor: '#53565a',
+                        backgroundColor: 'rgba(83,86,90,0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'Users' },
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Gross Profit ($)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderCharts() {
+            // Revenue & Users Chart
+            const ctx1 = document.getElementById('revChart');
+            if (charts.rev) charts.rev.destroy();
+            
+            charts.rev = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: data.months,
+                    datasets: [{
+                        label: 'Total Users',
+                        data: data.users,
+                        borderColor: '#e4002b',
+                        backgroundColor: 'rgba(228,0,43,0.1)',
+                        yAxisID: 'y',
+                        tension: 0.3,
+                        fill: true
+                    }, {
+                        label: 'GGR',
+                        data: data.ggr,
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39,174,96,0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    }, {
+                        label: 'Gross Profit',
+                        data: detailedData.grossProfit,
+                        borderColor: '#53565a',
+                        backgroundColor: 'rgba(83,86,90,0.1)',
+                        yAxisID: 'y1',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'Users' },
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Revenue ($)' }
+                        }
+                    }
+                }
+            });
+
+            // EBITDA & Cash Flow Chart
+            const ctx2 = document.getElementById('profitChart');
+            if (charts.profit) charts.profit.destroy();
+            
+            charts.profit = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: data.months,
+                    datasets: [{
+                        label: 'Monthly EBITDA',
+                        data: data.ebitda,
+                        backgroundColor: data.ebitda.map(e => e >= 0 ? '#27ae60' : '#e4002b'),
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Cumulative Cash Flow',
+                        data: detailedData.cumCash,
+                        type: 'line',
+                        borderColor: '#53565a',
+                        backgroundColor: 'rgba(83,86,90,0.1)',
+                        yAxisID: 'y',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Amount ($)' }
+                        }
+                    }
+                }
+            });
+
+            // User Growth Chart
+            const ctx3 = document.getElementById('userChart');
+            if (charts.user) charts.user.destroy();
+            
+            charts.user = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: data.months,
+                    datasets: [{
+                        label: 'Retained Users',
+                        data: detailedData.retainedUsers,
+                        backgroundColor: '#e4002b',
+                        stack: 'stack0'
+                    }, {
+                        label: 'New Users',
+                        data: detailedData.newUsers,
+                        backgroundColor: '#53565a',
+                        stack: 'stack0'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            title: { display: true, text: 'Users' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize
+        calc();
     </script>
 </body>
 </html>
