@@ -144,6 +144,12 @@
         </div>
         
         <div id="assumptions" class="tab-content">
+            <div style="background: #fff3f5; border: 2px solid #e4002b; border-radius: 8px; padding: 15px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 20px;">⚙️</span>
+                <span style="font-weight: 600;">Currently editing: <span id="scenarioIndicator" style="color: #e4002b;">Base Case</span></span>
+                <span style="color: #7f8c8d; font-size: 14px; margin-left: auto;">All changes save to the selected scenario only</span>
+            </div>
+            
             <div class="card">
                 <h2>Revenue & Users</h2>
                 <div class="input-grid">
@@ -486,6 +492,76 @@
             bonus: Array(14).fill(null),
             marketing: Array(14).fill(null)
         };
+        
+        // Store all assumptions independently per scenario
+        let scenarioAssumptions = {
+            base: {
+                startUsers: 164,
+                startMRPU: 51.16,
+                mrpuGrowth: 3,
+                mrpuCap: 120,
+                retention: 60,
+                mktBudget: 3000,
+                mktGrowth: 0,
+                mktCap: 50000,
+                startCAC: 37.32,
+                cacImp: 0,
+                cacFloor: 35,
+                bonusCost: 20,
+                payroll: 5300,
+                gna: 1500,
+                tech: 620,
+                kyc: 150,
+                affPlat: 2800,
+                affEmp: 1800,
+                csPayroll: 2500,
+                csTax: 30,
+                csTools: 200,
+                payFee: 2.4,
+                depRatio: 3,
+                betbyFee: 13,
+                casinoFee: 10,
+                sbSplit: 50,
+                eurUsd: 1.05,
+                startingCash: 80000,
+                cashBuffer: 10000,
+                fundingAmount: 0,
+                fundingMonth: -1
+            },
+            aggressive: {
+                startUsers: 164,
+                startMRPU: 51.16,
+                mrpuGrowth: 5,
+                mrpuCap: 120,
+                retention: 70,
+                mktBudget: 3000,
+                mktGrowth: 0,
+                mktCap: 50000,
+                startCAC: 37.32,
+                cacImp: 5,
+                cacFloor: 30,
+                bonusCost: 18,
+                payroll: 5300,
+                gna: 1500,
+                tech: 620,
+                kyc: 150,
+                affPlat: 2800,
+                affEmp: 1800,
+                csPayroll: 2500,
+                csTax: 30,
+                csTools: 200,
+                payFee: 2.4,
+                depRatio: 3,
+                betbyFee: 13,
+                casinoFee: 10,
+                sbSplit: 50,
+                eurUsd: 1.05,
+                startingCash: 80000,
+                cashBuffer: 10000,
+                fundingAmount: 0,
+                fundingMonth: -1
+            }
+        };
 
         function switchTab(t) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -501,23 +577,95 @@
         }
 
         function switchScenario(s) {
+            // Save current scenario's values before switching
+            saveCurrentScenarioAssumptions();
+            
+            // Switch to new scenario
             scenario = s;
             document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
-            if (s === 'base') {
-                document.getElementById('retention').value = 60;
-                document.getElementById('cacImp').value = 0;
-                document.getElementById('mrpuGrowth').value = 3;
-                document.getElementById('cacFloor').value = 35;
-                document.getElementById('bonusCost').value = 20;
-            } else {
-                document.getElementById('retention').value = 70;
-                document.getElementById('cacImp').value = 5;
-                document.getElementById('mrpuGrowth').value = 5;
-                document.getElementById('cacFloor').value = 30;
-                document.getElementById('bonusCost').value = 18;
+            
+            // Update scenario indicator
+            const indicator = document.getElementById('scenarioIndicator');
+            if (indicator) {
+                indicator.textContent = s === 'base' ? 'Base Case' : 'Aggressive Case';
             }
+            
+            // Load new scenario's values
+            loadScenarioAssumptions();
+            
+            // Recalculate
             calc();
+        }
+        
+        function saveCurrentScenarioAssumptions() {
+            const a = scenarioAssumptions[scenario];
+            a.startUsers = getVal('startUsers');
+            a.startMRPU = getVal('startMRPU');
+            a.mrpuGrowth = getVal('mrpuGrowth');
+            a.mrpuCap = getVal('mrpuCap');
+            a.retention = getVal('retention');
+            a.mktBudget = getVal('mktBudget');
+            a.mktGrowth = getVal('mktGrowth');
+            a.mktCap = getVal('mktCap');
+            a.startCAC = getVal('startCAC');
+            a.cacImp = getVal('cacImp');
+            a.cacFloor = getVal('cacFloor');
+            a.bonusCost = getVal('bonusCost');
+            a.payroll = getVal('payroll');
+            a.gna = getVal('gna');
+            a.tech = getVal('tech');
+            a.kyc = getVal('kyc');
+            a.affPlat = getVal('affPlat');
+            a.affEmp = getVal('affEmp');
+            a.csPayroll = getVal('csPayroll');
+            a.csTax = getVal('csTax');
+            a.csTools = getVal('csTools');
+            a.payFee = getVal('payFee');
+            a.depRatio = getVal('depRatio');
+            a.betbyFee = getVal('betbyFee');
+            a.casinoFee = getVal('casinoFee');
+            a.sbSplit = getVal('sbSplit');
+            a.eurUsd = getVal('eurUsd');
+            a.startingCash = getVal('startingCash');
+            a.cashBuffer = getVal('cashBuffer');
+            a.fundingAmount = getVal('fundingAmount');
+            a.fundingMonth = parseInt(document.getElementById('fundingMonth').value);
+        }
+        
+        function loadScenarioAssumptions() {
+            const a = scenarioAssumptions[scenario];
+            document.getElementById('startUsers').value = a.startUsers;
+            document.getElementById('startMRPU').value = a.startMRPU;
+            document.getElementById('mrpuGrowth').value = a.mrpuGrowth;
+            document.getElementById('mrpuCap').value = a.mrpuCap;
+            document.getElementById('retention').value = a.retention;
+            document.getElementById('mktBudget').value = a.mktBudget;
+            document.getElementById('mktGrowth').value = a.mktGrowth;
+            document.getElementById('mktCap').value = a.mktCap;
+            document.getElementById('startCAC').value = a.startCAC;
+            document.getElementById('cacImp').value = a.cacImp;
+            document.getElementById('cacFloor').value = a.cacFloor;
+            document.getElementById('bonusCost').value = a.bonusCost;
+            document.getElementById('payroll').value = a.payroll;
+            document.getElementById('gna').value = a.gna;
+            document.getElementById('tech').value = a.tech;
+            document.getElementById('kyc').value = a.kyc;
+            document.getElementById('affPlat').value = a.affPlat;
+            document.getElementById('affEmp').value = a.affEmp;
+            document.getElementById('csPayroll').value = a.csPayroll;
+            document.getElementById('csTax').value = a.csTax;
+            document.getElementById('csTools').value = a.csTools;
+            document.getElementById('payFee').value = a.payFee;
+            document.getElementById('depRatio').value = a.depRatio;
+            document.getElementById('betbyFee').value = a.betbyFee;
+            document.getElementById('casinoFee').value = a.casinoFee;
+            document.getElementById('sbSplit').value = a.sbSplit;
+            document.getElementById('eurUsd').value = a.eurUsd;
+            document.getElementById('startingCash').value = a.startingCash;
+            document.getElementById('cashBuffer').value = a.cashBuffer;
+            document.getElementById('fundingAmount').value = a.fundingAmount;
+            document.getElementById('fundingMonth').value = a.fundingMonth;
         }
 
         function getVal(id) {
@@ -880,6 +1028,9 @@
         }
 
         function calc() {
+            // Save current inputs to the active scenario
+            saveCurrentScenarioAssumptions();
+            
             const p = {
                 users: getVal('startUsers'),
                 mrpu: getVal('startMRPU'),
@@ -1755,6 +1906,7 @@
         }
 
         // Initialize
+        loadScenarioAssumptions();
         calc();
     </script>
 </body>
