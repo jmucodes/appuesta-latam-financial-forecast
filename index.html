@@ -98,6 +98,26 @@
                     <h3>Break-Even</h3>
                     <div class="value" id="breakEven">-</div>
                 </div>
+                <div class="metric-card" id="runwayCard">
+                    <h3>Runway</h3>
+                    <div class="value" id="runway">-</div>
+                </div>
+                <div class="metric-card" id="cashOutCard">
+                    <h3>Cash-Out Date</h3>
+                    <div class="value" id="cashOutDate">-</div>
+                </div>
+                <div class="metric-card" id="endingCashCard">
+                    <h3>Ending Cash (Dec 2026)</h3>
+                    <div class="value" id="endingCash">-</div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Cash Runway</h2>
+                <div id="runwayBar" style="margin-bottom: 20px;"></div>
+                <div class="chart-container">
+                    <canvas id="cashChart"></canvas>
+                </div>
             </div>
             
             <div class="card">
@@ -172,6 +192,47 @@
                 </div>
             </div>
             
+            <div class="card">
+                <h2>Funding & Runway</h2>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>Starting Cash Balance ($)</label>
+                        <input type="number" id="startingCash" value="80000">
+                        <small>Current cash on hand</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Minimum Cash Buffer ($)</label>
+                        <input type="number" id="cashBuffer" value="10000">
+                        <small>Safety threshold before warnings trigger</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Expected Funding Amount ($)</label>
+                        <input type="number" id="fundingAmount" value="0">
+                        <small>Leave 0 if no raise planned</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Expected Funding Month</label>
+                        <select id="fundingMonth">
+                            <option value="-1">No funding planned</option>
+                            <option value="0">Nov-25</option>
+                            <option value="1">Dec-25</option>
+                            <option value="2">Jan-26</option>
+                            <option value="3">Feb-26</option>
+                            <option value="4">Mar-26</option>
+                            <option value="5">Apr-26</option>
+                            <option value="6">May-26</option>
+                            <option value="7">Jun-26</option>
+                            <option value="8">Jul-26</option>
+                            <option value="9">Aug-26</option>
+                            <option value="10">Sep-26</option>
+                            <option value="11">Oct-26</option>
+                            <option value="12">Nov-26</option>
+                            <option value="13">Dec-26</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <h2>Bonus & Promotions</h2>
                 <div class="input-grid">
@@ -348,6 +409,10 @@
                 cac: getVal('startCAC'),
                 cacImp: getVal('cacImp') / 100,
                 cacFloor: getVal('cacFloor'),
+                startingCash: getVal('startingCash'),
+                cashBuffer: getVal('cashBuffer'),
+                fundingAmount: getVal('fundingAmount'),
+                fundingMonth: parseInt(document.getElementById('fundingMonth').value),
                 bonusCost: getVal('bonusCost') / 100,
                 payroll: getVal('payroll'),
                 gna: getVal('gna'),
@@ -406,7 +471,9 @@
                 totalFixedCosts: [],
                 oneTimeCosts: [],
                 cumCash: [],
-                cac: []
+                cac: [],
+                cashBalance: [],
+                fundingInflow: []
             };
 
             let cumGGR = 0;
@@ -414,6 +481,7 @@
             let currentCAC = p.cac;
             let currentMkt = p.mkt;
             let cumCash = 0;
+            let cashBalance = p.startingCash;
 
             for (let i = 0; i < 14; i++) {
                 const m = months[i];
@@ -493,6 +561,10 @@
 
                 cumCash += ebitda;
 
+                // Cash balance with funding
+                const fundingInflow = (p.fundingMonth === i) ? p.fundingAmount : 0;
+                cashBalance += ebitda + fundingInflow;
+
                 // Store main data
                 data.months.push(m);
                 data.users.push(totalUsers);
@@ -530,7 +602,15 @@
                 detailedData.oneTimeCosts.push(oneTimeCosts);
                 detailedData.cumCash.push(cumCash);
                 detailedData.cac.push(currentCAC);
+                detailedData.cashBalance.push(cashBalance);
+                detailedData.fundingInflow.push(fundingInflow);
             }
+
+            // Store funding params for dashboard
+            data.startingCash = p.startingCash;
+            data.cashBuffer = p.cashBuffer;
+            data.fundingAmount = p.fundingAmount;
+            data.fundingMonth = p.fundingMonth;
 
             data.cashFlow = cumCash;
             updateDashboard();
@@ -570,8 +650,111 @@
             }
             document.getElementById('breakEven').textContent = breakEven;
 
+            // Runway calculations
+            let runway = 0;
+            let cashOutDate = 'N/A';
+            let cashOutIndex = -1;
+            
+            for (let i = 0; i < detailedData.cashBalance.length; i++) {
+                if (detailedData.cashBalance[i] > data.cashBuffer) {
+                    runway++;
+                } else {
+                    if (cashOutIndex === -1) {
+                        cashOutIndex = i;
+                        cashOutDate = data.months[i];
+                    }
+                }
+            }
+            
+            // If we never run out, runway is full period
+            if (cashOutIndex === -1 && detailedData.cashBalance[detailedData.cashBalance.length - 1] > data.cashBuffer) {
+                cashOutDate = 'Beyond Dec-26';
+            }
+            
+            document.getElementById('runway').textContent = runway + ' months';
+            document.getElementById('cashOutDate').textContent = cashOutDate;
+            
+            // Ending cash
+            const endingCash = detailedData.cashBalance[detailedData.cashBalance.length - 1];
+            document.getElementById('endingCash').textContent = '$' + endingCash.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            
+            // Color code runway card
+            const runwayCard = document.getElementById('runwayCard');
+            if (runway >= 9) {
+                runwayCard.className = 'metric-card positive';
+            } else if (runway >= 6) {
+                runwayCard.className = 'metric-card';
+            } else {
+                runwayCard.className = 'metric-card negative';
+            }
+            
+            // Color code cash-out card
+            const cashOutCard = document.getElementById('cashOutCard');
+            if (cashOutDate === 'Beyond Dec-26') {
+                cashOutCard.className = 'metric-card positive';
+            } else if (runway >= 6) {
+                cashOutCard.className = 'metric-card';
+            } else {
+                cashOutCard.className = 'metric-card negative';
+            }
+            
+            // Color code ending cash card
+            const endingCashCard = document.getElementById('endingCashCard');
+            if (endingCash > data.cashBuffer) {
+                endingCashCard.className = 'metric-card positive';
+            } else if (endingCash > 0) {
+                endingCashCard.className = 'metric-card';
+            } else {
+                endingCashCard.className = 'metric-card negative';
+            }
+            
+            // Runway progress bar
+            const runwayPercent = Math.min((runway / 14) * 100, 100);
+            let barColor = '#27ae60';
+            if (runway < 6) barColor = '#e4002b';
+            else if (runway < 9) barColor = '#f39c12';
+            
+            document.getElementById('runwayBar').innerHTML = `
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <div style="flex: 1; background: #e0e6ed; border-radius: 10px; height: 24px; overflow: hidden;">
+                        <div style="width: ${runwayPercent}%; background: ${barColor}; height: 100%; border-radius: 10px; transition: width 0.5s;"></div>
+                    </div>
+                    <span style="font-weight: 600; min-width: 100px;">${runway} / 14 months</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: #7f8c8d;">
+                    <span>Nov-25</span>
+                    <span style="color: ${runway < 6 ? '#e4002b' : '#7f8c8d'};">${runway < 6 ? '⚠️ Critical: Start fundraising now' : runway < 9 ? '⚡ Warning: Plan fundraising' : '✅ Healthy runway'}</span>
+                    <span>Dec-26</span>
+                </div>
+            `;
+
+            // Render cash chart
+            renderCashChart();
+
             // Milestones
             const milestones = [];
+            
+            // Runway warnings
+            if (runway < 6) {
+                milestones.push(`<div class="milestone" style="background: linear-gradient(135deg, #e4002b15 0%, #e4002b25 100%); border-left-color: #e4002b;">
+                    <h4>🚨 Critical: ${runway} months runway</h4>
+                    <p style="margin-top: 5px; font-size: 14px;">Cash runs low by ${cashOutDate}. Immediate fundraising recommended.</p>
+                </div>`);
+            } else if (runway < 9) {
+                milestones.push(`<div class="milestone" style="background: linear-gradient(135deg, #f39c1215 0%, #f39c1225 100%); border-left-color: #f39c12;">
+                    <h4>⚡ Warning: ${runway} months runway</h4>
+                    <p style="margin-top: 5px; font-size: 14px;">Begin fundraising preparations. Target close before ${cashOutDate}.</p>
+                </div>`);
+            }
+            
+            // Funding milestone
+            if (data.fundingMonth >= 0 && data.fundingAmount > 0) {
+                milestones.push(`<div class="milestone" style="background: linear-gradient(135deg, #27ae6015 0%, #27ae6025 100%); border-left-color: #27ae60;">
+                    <h4>💵 Funding Expected: ${data.months[data.fundingMonth]}</h4>
+                    <p style="margin-top: 5px; font-size: 14px;">$${data.fundingAmount.toLocaleString()} raise planned</p>
+                </div>`);
+            }
+            
             if (breakEven !== 'Not reached') {
                 milestones.push(`<div class="milestone"><h4>💰 Break-Even: ${breakEven}</h4></div>`);
             }
@@ -742,8 +925,112 @@
             detailedData.cumCash.forEach(c => html += `<td class="${fmtClass(c)}">${fmt(c)}</td>`);
             html += '</tr>';
 
+            // FUNDING SECTION
+            html += '<tr class="section-header"><td colspan="' + (data.months.length + 1) + '">💵 CASH POSITION</td></tr>';
+            
+            html += '<tr><td>Starting Cash</td>';
+            data.months.forEach((m, i) => html += `<td>${i === 0 ? fmt(data.startingCash) : '-'}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td>Funding Inflow</td>';
+            detailedData.fundingInflow.forEach(f => html += `<td>${f > 0 ? fmt(f) : '-'}</td>`);
+            html += '</tr>';
+            
+            html += '<tr class="total-row"><td>Cash Balance</td>';
+            detailedData.cashBalance.forEach(c => html += `<td class="${fmtClass(c)}">${fmt(c)}</td>`);
+            html += '</tr>';
+
             html += '</tbody>';
             document.getElementById('plTable').innerHTML = html;
+        }
+
+        function renderCashChart() {
+            const ctx = document.getElementById('cashChart');
+            if (charts.cash) charts.cash.destroy();
+            
+            // Create zone backgrounds
+            const bufferLine = Array(14).fill(data.cashBuffer);
+            const warningLine = Array(14).fill(data.cashBuffer * 3);
+            
+            charts.cash = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.months,
+                    datasets: [{
+                        label: 'Cash Balance',
+                        data: detailedData.cashBalance,
+                        borderColor: '#53565a',
+                        backgroundColor: 'rgba(83,86,90,0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: detailedData.cashBalance.map(c => {
+                            if (c <= data.cashBuffer) return '#e4002b';
+                            if (c <= data.cashBuffer * 3) return '#f39c12';
+                            return '#27ae60';
+                        }),
+                        pointRadius: 5
+                    }, {
+                        label: 'Minimum Buffer',
+                        data: bufferLine,
+                        borderColor: '#e4002b',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }, {
+                        label: 'Monthly EBITDA',
+                        data: data.ebitda,
+                        type: 'bar',
+                        backgroundColor: data.ebitda.map(e => e >= 0 ? 'rgba(39,174,96,0.6)' : 'rgba(228,0,43,0.6)'),
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: function(context) {
+                                    const idx = context[0].dataIndex;
+                                    const funding = detailedData.fundingInflow[idx];
+                                    if (funding > 0) {
+                                        return `\n💵 Funding: +$${funding.toLocaleString()}`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'Cash Balance ($)' },
+                            grid: {
+                                color: function(context) {
+                                    if (context.tick.value === 0) return '#e4002b';
+                                    return 'rgba(0,0,0,0.1)';
+                                }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: true, text: 'Monthly EBITDA ($)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
         }
 
         function renderGrowthChart() {
