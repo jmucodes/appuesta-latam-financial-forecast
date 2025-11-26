@@ -1163,7 +1163,7 @@
                 if (i >= 9 && i <= 11) flexsyFee = Math.max(flexsyFee, 6000 * p.eurUsd);
                 if (i >= 12) flexsyFee = Math.max(flexsyFee, 12000 * p.eurUsd);
 
-                const gamingtecFee = isDec ? 2000 : 0;
+                const gamingtecFee = i === 0 ? 6603.08 : (isDec ? 2000 : 0);
                 const totalProvFees = betbyFee + casinoProvFee + flexsyFee + gamingtecFee;
 
                 // Payment processing
