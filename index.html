@@ -144,8 +144,18 @@
                 <h2>Marketing & CAC</h2>
                 <div class="input-grid">
                     <div class="input-group">
-                        <label>Marketing Budget ($)</label>
+                        <label>Starting Marketing Budget ($)</label>
                         <input type="number" id="mktBudget" value="3000">
+                    </div>
+                    <div class="input-group">
+                        <label>Marketing Growth (%/mo)</label>
+                        <input type="number" id="mktGrowth" value="0" step="1">
+                        <small>Monthly increase in marketing spend</small>
+                    </div>
+                    <div class="input-group">
+                        <label>Marketing Budget Cap ($)</label>
+                        <input type="number" id="mktCap" value="50000">
+                        <small>Maximum monthly marketing spend</small>
                     </div>
                     <div class="input-group">
                         <label>Starting CAC ($)</label>
@@ -333,6 +343,8 @@
                 mrpuCap: getVal('mrpuCap'),
                 ret: getVal('retention') / 100,
                 mkt: getVal('mktBudget'),
+                mktGrowth: getVal('mktGrowth') / 100,
+                mktCap: getVal('mktCap'),
                 cac: getVal('startCAC'),
                 cacImp: getVal('cacImp') / 100,
                 cacFloor: getVal('cacFloor'),
@@ -393,12 +405,14 @@
                 marketing: [],
                 totalFixedCosts: [],
                 oneTimeCosts: [],
-                cumCash: []
+                cumCash: [],
+                cac: []
             };
 
             let cumGGR = 0;
             let currentMRPU = p.mrpu;
             let currentCAC = p.cac;
+            let currentMkt = p.mkt;
             let cumCash = 0;
 
             for (let i = 0; i < 14; i++) {
@@ -415,9 +429,14 @@
                     currentCAC = Math.max(currentCAC * (1 - p.cacImp), p.cacFloor);
                 }
 
+                // Marketing budget growth
+                if (i > 0) {
+                    currentMkt = Math.min(currentMkt * (1 + p.mktGrowth), p.mktCap);
+                }
+
                 // User calculations
                 const retainedUsers = i === 0 ? p.users : Math.floor(data.users[i - 1] * p.ret);
-                const newUsers = Math.floor(p.mkt / currentCAC);
+                const newUsers = Math.floor(currentMkt / currentCAC);
                 const totalUsers = retainedUsers + newUsers;
 
                 // Revenue calculations
@@ -461,7 +480,7 @@
                 const affPlat = p.affPlat;
                 const affEmp = p.affEmp;
                 const csTotal = i >= 2 ? p.csPayroll * (1 + p.csTax) + p.csTools : 0;
-                const marketing = p.mkt;
+                const marketing = currentMkt;
 
                 const totalFixedCosts = payroll + gna + tech + kyc + affPlat + affEmp + csTotal + marketing;
 
@@ -510,6 +529,7 @@
                 detailedData.totalFixedCosts.push(totalFixedCosts);
                 detailedData.oneTimeCosts.push(oneTimeCosts);
                 detailedData.cumCash.push(cumCash);
+                detailedData.cac.push(currentCAC);
             }
 
             data.cashFlow = cumCash;
@@ -578,8 +598,8 @@
             
             const fmtClass = n => n < 0 ? 'negative-value' : '';
 
-            let html = '<thead><tr style="background:#53565a;color:white;"><th style="color:white;min-width:200px;">Line Item</th>';
-            data.months.forEach(m => html += `<th style="color:white;">${m}</th>`);
+            let html = '<thead><tr style="background:#f8f9fa;"><th style="color:#53565a;min-width:200px;">Line Item</th>';
+            data.months.forEach(m => html += `<th style="color:#53565a;">${m}</th>`);
             html += '</tr></thead><tbody>';
 
             // USERS SECTION
@@ -591,6 +611,10 @@
             
             html += '<tr><td class="indent">New Users</td>';
             detailedData.newUsers.forEach(u => html += `<td>${u.toLocaleString()}</td>`);
+            html += '</tr>';
+            
+            html += '<tr><td class="indent">CAC</td>';
+            detailedData.cac.forEach(c => html += `<td>$${c.toFixed(2)}</td>`);
             html += '</tr>';
             
             html += '<tr class="subtotal-row"><td>Total Active Users</td>';
