@@ -51,6 +51,10 @@
         .table-wrapper { overflow-x: auto; max-height: 800px; overflow-y: auto; }
         .negative-value { color: #e4002b; }
         .positive-value { color: #27ae60; }
+        .variance-good { background-color: rgba(39, 174, 96, 0.1); }
+        .variance-bad { background-color: rgba(228, 0, 43, 0.1); }
+        .accuracy-high { color: #27ae60; font-weight: 700; }
+        .accuracy-low { color: #e4002b; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -69,6 +73,7 @@
             <div class="tab active" onclick="switchTab('dashboard')">Dashboard</div>
             <div class="tab" onclick="switchTab('assumptions')">Assumptions</div>
             <div class="tab" onclick="switchTab('pl')">P&L</div>
+            <div class="tab" onclick="switchTab('actuals')">Actuals vs Forecast</div>
             <div class="tab" onclick="switchTab('charts')">Charts</div>
         </div>
         
@@ -109,6 +114,11 @@
                 <div class="metric-card" id="endingCashCard">
                     <h3>Ending Cash (Dec 2026)</h3>
                     <div class="value" id="endingCash">-</div>
+                </div>
+                <div class="metric-card" id="forecastAccuracyCard">
+                    <h3>Forecast Accuracy</h3>
+                    <div class="value" id="forecastAccuracy">—</div>
+                    <small id="forecastAccuracyNote" style="color: #7f8c8d;"></small>
                 </div>
             </div>
             
@@ -334,6 +344,110 @@
             </div>
         </div>
         
+        <div id="actuals" class="tab-content">
+            <div class="card">
+                <h2>Enter Monthly Actuals</h2>
+                <div class="input-grid" style="margin-bottom: 20px;">
+                    <div class="input-group">
+                        <label>Select Month</label>
+                        <select id="actualsMonth" onchange="loadActualsForMonth()">
+                            <option value="0">Nov-25</option>
+                            <option value="1">Dec-25</option>
+                            <option value="2">Jan-26</option>
+                            <option value="3">Feb-26</option>
+                            <option value="4">Mar-26</option>
+                            <option value="5">Apr-26</option>
+                            <option value="6">May-26</option>
+                            <option value="7">Jun-26</option>
+                            <option value="8">Jul-26</option>
+                            <option value="9">Aug-26</option>
+                            <option value="10">Sep-26</option>
+                            <option value="11">Oct-26</option>
+                            <option value="12">Nov-26</option>
+                            <option value="13">Dec-26</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label>Active Users</label>
+                        <input type="number" id="actualUsers" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>GGR ($)</label>
+                        <input type="number" id="actualGGR" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>Gross Profit ($)</label>
+                        <input type="number" id="actualGrossProfit" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>EBITDA ($)</label>
+                        <input type="number" id="actualEBITDA" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>Cash Balance ($)</label>
+                        <input type="number" id="actualCash" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>MRPU ($)</label>
+                        <input type="number" id="actualMRPU" step="0.01" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>CAC ($)</label>
+                        <input type="number" id="actualCAC" step="0.01" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>Bonus Costs ($)</label>
+                        <input type="number" id="actualBonus" placeholder="Leave blank if no data">
+                    </div>
+                    <div class="input-group">
+                        <label>Marketing Spend ($)</label>
+                        <input type="number" id="actualMarketing" placeholder="Leave blank if no data">
+                    </div>
+                </div>
+                <button class="btn" onclick="saveActuals()" style="margin-top: 20px;">💾 Save Actuals</button>
+                <button class="btn" onclick="clearActuals()" style="margin-top: 20px; margin-left: 10px; background: #7f8c8d;">🗑️ Clear Month</button>
+            </div>
+            
+            <div class="card">
+                <h2>Forecast Accuracy Summary</h2>
+                <div class="metrics-grid" id="accuracySummary">
+                    <div class="metric-card">
+                        <h3>Months with Actuals</h3>
+                        <div class="value" id="monthsTracked">0</div>
+                    </div>
+                    <div class="metric-card" id="ggrAccuracyCard">
+                        <h3>GGR Accuracy</h3>
+                        <div class="value" id="ggrAccuracy">—</div>
+                    </div>
+                    <div class="metric-card" id="usersAccuracyCard">
+                        <h3>Users Accuracy</h3>
+                        <div class="value" id="usersAccuracy">—</div>
+                    </div>
+                    <div class="metric-card" id="ebitdaAccuracyCard">
+                        <h3>EBITDA Accuracy</h3>
+                        <div class="value" id="ebitdaAccuracy">—</div>
+                    </div>
+                </div>
+                <div id="accuracyAlerts" style="margin-top: 20px;"></div>
+            </div>
+            
+            <div class="card">
+                <h2>Variance Analysis</h2>
+                <div class="table-wrapper">
+                    <table id="varianceTable"></table>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>Forecast vs Actual Trends</h2>
+                <div class="chart-container">
+                    <canvas id="varianceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
         <div id="charts" class="tab-content">
             <div class="card">
                 <h2>Revenue & Users</h2>
@@ -361,6 +475,17 @@
         let data = {};
         let charts = {};
         let detailedData = {};
+        let actuals = {
+            users: Array(14).fill(null),
+            ggr: Array(14).fill(null),
+            grossProfit: Array(14).fill(null),
+            ebitda: Array(14).fill(null),
+            cash: Array(14).fill(null),
+            mrpu: Array(14).fill(null),
+            cac: Array(14).fill(null),
+            bonus: Array(14).fill(null),
+            marketing: Array(14).fill(null)
+        };
 
         function switchTab(t) {
             document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -369,6 +494,9 @@
             document.getElementById(t).classList.add('active');
             if (t === 'charts') {
                 setTimeout(renderCharts, 100);
+            }
+            if (t === 'actuals') {
+                setTimeout(updateActualsView, 100);
             }
         }
 
@@ -394,6 +522,361 @@
 
         function getVal(id) {
             return parseFloat(document.getElementById(id).value) || 0;
+        }
+
+        function loadActualsForMonth() {
+            const month = parseInt(document.getElementById('actualsMonth').value);
+            document.getElementById('actualUsers').value = actuals.users[month] !== null ? actuals.users[month] : '';
+            document.getElementById('actualGGR').value = actuals.ggr[month] !== null ? actuals.ggr[month] : '';
+            document.getElementById('actualGrossProfit').value = actuals.grossProfit[month] !== null ? actuals.grossProfit[month] : '';
+            document.getElementById('actualEBITDA').value = actuals.ebitda[month] !== null ? actuals.ebitda[month] : '';
+            document.getElementById('actualCash').value = actuals.cash[month] !== null ? actuals.cash[month] : '';
+            document.getElementById('actualMRPU').value = actuals.mrpu[month] !== null ? actuals.mrpu[month] : '';
+            document.getElementById('actualCAC').value = actuals.cac[month] !== null ? actuals.cac[month] : '';
+            document.getElementById('actualBonus').value = actuals.bonus[month] !== null ? actuals.bonus[month] : '';
+            document.getElementById('actualMarketing').value = actuals.marketing[month] !== null ? actuals.marketing[month] : '';
+        }
+
+        function saveActuals() {
+            const month = parseInt(document.getElementById('actualsMonth').value);
+            const getValue = (id) => {
+                const val = document.getElementById(id).value;
+                return val !== '' ? parseFloat(val) : null;
+            };
+            
+            actuals.users[month] = getValue('actualUsers');
+            actuals.ggr[month] = getValue('actualGGR');
+            actuals.grossProfit[month] = getValue('actualGrossProfit');
+            actuals.ebitda[month] = getValue('actualEBITDA');
+            actuals.cash[month] = getValue('actualCash');
+            actuals.mrpu[month] = getValue('actualMRPU');
+            actuals.cac[month] = getValue('actualCAC');
+            actuals.bonus[month] = getValue('actualBonus');
+            actuals.marketing[month] = getValue('actualMarketing');
+            
+            updateActualsView();
+            alert('Actuals saved for ' + data.months[month]);
+        }
+
+        function clearActuals() {
+            const month = parseInt(document.getElementById('actualsMonth').value);
+            actuals.users[month] = null;
+            actuals.ggr[month] = null;
+            actuals.grossProfit[month] = null;
+            actuals.ebitda[month] = null;
+            actuals.cash[month] = null;
+            actuals.mrpu[month] = null;
+            actuals.cac[month] = null;
+            actuals.bonus[month] = null;
+            actuals.marketing[month] = null;
+            
+            loadActualsForMonth();
+            updateActualsView();
+        }
+
+        function updateActualsView() {
+            updateVarianceTable();
+            updateAccuracySummary();
+            renderVarianceChart();
+        }
+
+        function updateVarianceTable() {
+            const fmt = (n, decimals = 0) => {
+                if (n === null || n === undefined || isNaN(n)) return '—';
+                const formatted = '$' + Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: decimals });
+                return n < 0 ? '(' + formatted + ')' : formatted;
+            };
+            
+            const fmtNum = (n, decimals = 0) => {
+                if (n === null || n === undefined || isNaN(n)) return '—';
+                return n.toLocaleString(undefined, { maximumFractionDigits: decimals });
+            };
+            
+            const fmtVar = (actual, forecast) => {
+                if (actual === null || actual === undefined) return '—';
+                const variance = actual - forecast;
+                const pct = ((variance / Math.abs(forecast)) * 100);
+                const sign = variance >= 0 ? '+' : '';
+                return sign + pct.toFixed(1) + '%';
+            };
+            
+            const varClass = (actual, forecast, inverse = false) => {
+                if (actual === null || actual === undefined) return '';
+                const variance = actual - forecast;
+                const pct = (variance / Math.abs(forecast)) * 100;
+                if (inverse) {
+                    return pct <= -5 ? 'positive-value' : pct >= 5 ? 'negative-value' : '';
+                }
+                return pct >= 5 ? 'positive-value' : pct <= -5 ? 'negative-value' : '';
+            };
+
+            let html = '<thead><tr style="background:#f8f9fa;"><th style="color:#53565a;min-width:150px;">Metric</th>';
+            data.months.forEach(m => html += `<th style="color:#53565a;">${m}</th>`);
+            html += '</tr></thead><tbody>';
+
+            // Define metrics to display
+            const metrics = [
+                { name: 'Active Users', forecast: data.users, actual: actuals.users, format: 'num', inverse: false },
+                { name: 'GGR', forecast: data.ggr, actual: actuals.ggr, format: 'dollar', inverse: false },
+                { name: 'Gross Profit', forecast: detailedData.grossProfit, actual: actuals.grossProfit, format: 'dollar', inverse: false },
+                { name: 'EBITDA', forecast: data.ebitda, actual: actuals.ebitda, format: 'dollar', inverse: false },
+                { name: 'Cash Balance', forecast: detailedData.cashBalance, actual: actuals.cash, format: 'dollar', inverse: false },
+                { name: 'MRPU', forecast: detailedData.mrpu, actual: actuals.mrpu, format: 'dollar2', inverse: false },
+                { name: 'CAC', forecast: detailedData.cac, actual: actuals.cac, format: 'dollar2', inverse: true },
+                { name: 'Bonus Costs', forecast: detailedData.bonusCosts, actual: actuals.bonus, format: 'dollar', inverse: true },
+                { name: 'Marketing Spend', forecast: detailedData.marketing, actual: actuals.marketing, format: 'dollar', inverse: false }
+            ];
+
+            metrics.forEach(metric => {
+                // Forecast row
+                html += `<tr class="subsection-header"><td>${metric.name}</td>`;
+                html += `<td colspan="${data.months.length}"></td></tr>`;
+                
+                html += '<tr><td class="indent">Forecast</td>';
+                metric.forecast.forEach(v => {
+                    if (metric.format === 'num') html += `<td>${fmtNum(v)}</td>`;
+                    else if (metric.format === 'dollar2') html += `<td>${fmt(v, 2)}</td>`;
+                    else html += `<td>${fmt(v)}</td>`;
+                });
+                html += '</tr>';
+                
+                // Actual row
+                html += '<tr><td class="indent">Actual</td>';
+                metric.actual.forEach((v, i) => {
+                    if (v === null) {
+                        html += '<td style="color:#bdc3c7;">—</td>';
+                    } else {
+                        if (metric.format === 'num') html += `<td><strong>${fmtNum(v)}</strong></td>`;
+                        else if (metric.format === 'dollar2') html += `<td><strong>${fmt(v, 2)}</strong></td>`;
+                        else html += `<td><strong>${fmt(v)}</strong></td>`;
+                    }
+                });
+                html += '</tr>';
+                
+                // Variance row
+                html += '<tr><td class="indent">Variance %</td>';
+                metric.actual.forEach((v, i) => {
+                    const vc = varClass(v, metric.forecast[i], metric.inverse);
+                    html += `<td class="${vc}">${fmtVar(v, metric.forecast[i])}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody>';
+            document.getElementById('varianceTable').innerHTML = html;
+        }
+
+        function updateAccuracySummary() {
+            // Count months with actuals
+            let monthsTracked = 0;
+            for (let i = 0; i < 14; i++) {
+                if (actuals.ggr[i] !== null) monthsTracked++;
+            }
+            document.getElementById('monthsTracked').textContent = monthsTracked;
+
+            // Calculate accuracy for each key metric
+            const calcAccuracy = (actualArr, forecastArr) => {
+                let totalVar = 0;
+                let count = 0;
+                for (let i = 0; i < 14; i++) {
+                    if (actualArr[i] !== null && forecastArr[i] !== 0) {
+                        const pct = Math.abs((actualArr[i] - forecastArr[i]) / forecastArr[i]) * 100;
+                        totalVar += pct;
+                        count++;
+                    }
+                }
+                if (count === 0) return null;
+                return Math.max(0, 100 - (totalVar / count));
+            };
+
+            const ggrAcc = calcAccuracy(actuals.ggr, data.ggr);
+            const usersAcc = calcAccuracy(actuals.users, data.users);
+            const ebitdaAcc = calcAccuracy(actuals.ebitda, data.ebitda);
+
+            const formatAcc = (acc) => acc !== null ? acc.toFixed(0) + '%' : '—';
+            const accClass = (acc) => {
+                if (acc === null) return 'metric-card';
+                if (acc >= 90) return 'metric-card positive';
+                if (acc >= 75) return 'metric-card';
+                return 'metric-card negative';
+            };
+
+            document.getElementById('ggrAccuracy').textContent = formatAcc(ggrAcc);
+            document.getElementById('usersAccuracy').textContent = formatAcc(usersAcc);
+            document.getElementById('ebitdaAccuracy').textContent = formatAcc(ebitdaAcc);
+
+            document.getElementById('ggrAccuracyCard').className = accClass(ggrAcc);
+            document.getElementById('usersAccuracyCard').className = accClass(usersAcc);
+            document.getElementById('ebitdaAccuracyCard').className = accClass(ebitdaAcc);
+
+            // Generate alerts
+            const alerts = [];
+            
+            // Check for consecutive misses
+            const checkConsecutiveMiss = (actualArr, forecastArr, metricName, threshold, inverse = false) => {
+                let consecutive = 0;
+                let direction = null;
+                for (let i = 0; i < 14; i++) {
+                    if (actualArr[i] !== null) {
+                        const varPct = ((actualArr[i] - forecastArr[i]) / Math.abs(forecastArr[i])) * 100;
+                        const isBad = inverse ? varPct > threshold : varPct < -threshold;
+                        if (isBad) {
+                            consecutive++;
+                            direction = inverse ? 'above' : 'below';
+                        } else {
+                            consecutive = 0;
+                        }
+                    }
+                }
+                return { consecutive, direction };
+            };
+
+            const ggrMiss = checkConsecutiveMiss(actuals.ggr, data.ggr, 'GGR', 10);
+            if (ggrMiss.consecutive >= 2) {
+                alerts.push(`<div class="milestone" style="background: linear-gradient(135deg, #e4002b15 0%, #e4002b25 100%); border-left-color: #e4002b;">
+                    <h4>⚠️ GGR ${ggrMiss.consecutive} months ${ggrMiss.direction} forecast</h4>
+                    <p style="margin-top: 5px; font-size: 14px;">Revenue consistently missing targets. Review MRPU and user assumptions.</p>
+                </div>`);
+            }
+
+            const cacMiss = checkConsecutiveMiss(actuals.cac, detailedData.cac, 'CAC', 15, true);
+            if (cacMiss.consecutive >= 2) {
+                alerts.push(`<div class="milestone" style="background: linear-gradient(135deg, #f39c1215 0%, #f39c1225 100%); border-left-color: #f39c12;">
+                    <h4>⚡ CAC ${cacMiss.consecutive} months above forecast</h4>
+                    <p style="margin-top: 5px; font-size: 14px;">Acquisition costs higher than expected. Review marketing efficiency.</p>
+                </div>`);
+            }
+
+            // Check for positive trends
+            const checkPositiveTrend = (actualArr, forecastArr, metricName, threshold) => {
+                let consecutive = 0;
+                for (let i = 0; i < 14; i++) {
+                    if (actualArr[i] !== null) {
+                        const varPct = ((actualArr[i] - forecastArr[i]) / Math.abs(forecastArr[i])) * 100;
+                        if (varPct > threshold) {
+                            consecutive++;
+                        } else {
+                            consecutive = 0;
+                        }
+                    }
+                }
+                return consecutive;
+            };
+
+            const ggrBeat = checkPositiveTrend(actuals.ggr, data.ggr, 'GGR', 5);
+            if (ggrBeat >= 2) {
+                alerts.push(`<div class="milestone" style="background: linear-gradient(135deg, #27ae6015 0%, #27ae6025 100%); border-left-color: #27ae60;">
+                    <h4>🎉 Beating GGR forecast ${ggrBeat} months in a row</h4>
+                    <p style="margin-top: 5px; font-size: 14px;">Consider revising assumptions upward.</p>
+                </div>`);
+            }
+
+            // Cash warning
+            for (let i = 0; i < 14; i++) {
+                if (actuals.cash[i] !== null && detailedData.cashBalance[i]) {
+                    const varPct = ((actuals.cash[i] - detailedData.cashBalance[i]) / Math.abs(detailedData.cashBalance[i])) * 100;
+                    if (varPct < -20) {
+                        alerts.push(`<div class="milestone" style="background: linear-gradient(135deg, #e4002b15 0%, #e4002b25 100%); border-left-color: #e4002b;">
+                            <h4>🚨 Cash ${Math.abs(varPct).toFixed(0)}% below forecast in ${data.months[i]}</h4>
+                            <p style="margin-top: 5px; font-size: 14px;">Actual runway may be shorter than projected.</p>
+                        </div>`);
+                        break;
+                    }
+                }
+            }
+
+            document.getElementById('accuracyAlerts').innerHTML = alerts.length > 0 ? alerts.join('') : '<p style="color: #7f8c8d;">Enter actuals to see variance alerts</p>';
+        }
+
+        function renderVarianceChart() {
+            const ctx = document.getElementById('varianceChart');
+            if (charts.variance) charts.variance.destroy();
+
+            // Only show months with actuals
+            const hasActuals = actuals.ggr.map((v, i) => v !== null);
+            const labels = data.months.filter((m, i) => hasActuals[i]);
+            
+            if (labels.length === 0) {
+                document.getElementById('varianceChart').parentElement.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 50px;">Enter actuals to see the variance chart</p><canvas id="varianceChart"></canvas>';
+                return;
+            }
+
+            const forecastGGR = data.ggr.filter((v, i) => hasActuals[i]);
+            const actualGGR = actuals.ggr.filter(v => v !== null);
+            const forecastUsers = data.users.filter((v, i) => hasActuals[i]);
+            const actualUsers = actuals.users.filter((v, i) => hasActuals[i] && actuals.users[i] !== null);
+
+            charts.variance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'GGR Forecast',
+                        data: forecastGGR,
+                        backgroundColor: 'rgba(228,0,43,0.3)',
+                        borderColor: '#e4002b',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        type: 'line',
+                        yAxisID: 'y',
+                        tension: 0.3,
+                        pointRadius: 0
+                    }, {
+                        label: 'GGR Actual',
+                        data: actualGGR,
+                        backgroundColor: '#e4002b',
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Users Forecast',
+                        data: forecastUsers,
+                        backgroundColor: 'rgba(83,86,90,0.3)',
+                        borderColor: '#53565a',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        type: 'line',
+                        yAxisID: 'y1',
+                        tension: 0.3,
+                        pointRadius: 0
+                    }, {
+                        label: 'Users Actual',
+                        data: actualUsers.length > 0 ? actualUsers : Array(labels.length).fill(null),
+                        backgroundColor: '#53565a',
+                        type: 'line',
+                        yAxisID: 'y1',
+                        tension: 0.3,
+                        pointRadius: 6,
+                        pointBackgroundColor: '#53565a'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            position: 'left',
+                            title: { display: true, text: 'GGR ($)' },
+                            beginAtZero: true
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            title: { display: true, text: 'Users' },
+                            grid: { drawOnChartArea: false },
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
         }
 
         function calc() {
@@ -730,6 +1213,9 @@
 
             // Render cash chart
             renderCashChart();
+            
+            // Update forecast accuracy on dashboard
+            updateDashboardAccuracy();
 
             // Milestones
             const milestones = [];
@@ -942,6 +1428,40 @@
 
             html += '</tbody>';
             document.getElementById('plTable').innerHTML = html;
+        }
+
+        function updateDashboardAccuracy() {
+            // Calculate overall forecast accuracy based on GGR
+            let totalVar = 0;
+            let count = 0;
+            for (let i = 0; i < 14; i++) {
+                if (actuals.ggr[i] !== null && data.ggr[i] !== 0) {
+                    const pct = Math.abs((actuals.ggr[i] - data.ggr[i]) / data.ggr[i]) * 100;
+                    totalVar += pct;
+                    count++;
+                }
+            }
+            
+            const card = document.getElementById('forecastAccuracyCard');
+            const note = document.getElementById('forecastAccuracyNote');
+            
+            if (count === 0) {
+                document.getElementById('forecastAccuracy').textContent = '—';
+                note.textContent = 'Enter actuals to track';
+                card.className = 'metric-card';
+            } else {
+                const accuracy = Math.max(0, 100 - (totalVar / count));
+                document.getElementById('forecastAccuracy').textContent = accuracy.toFixed(0) + '%';
+                note.textContent = `Based on ${count} month${count > 1 ? 's' : ''} of data`;
+                
+                if (accuracy >= 90) {
+                    card.className = 'metric-card positive';
+                } else if (accuracy >= 75) {
+                    card.className = 'metric-card';
+                } else {
+                    card.className = 'metric-card negative';
+                }
+            }
         }
 
         function renderCashChart() {
