@@ -3398,7 +3398,8 @@
         function parseCreditCardCSV(lines) {
             const transactions = [];
             
-            for (let i = 2; i < lines.length; i++) {
+            // Start from line 1 (skip header at line 0)
+            for (let i = 1; i < lines.length; i++) {
                 const line = lines[i];
                 if (!line.trim()) continue;
                 
@@ -3407,13 +3408,17 @@
                 
                 const [producto, fecha, referencia, concepto, moneda, debito, credito] = fields;
                 
+                // Skip if no valid date
+                if (!fecha || !fecha.includes('/')) continue;
+                
                 // Parse date
-                const dateParts = fecha.split('/');
+                const dateParts = fecha.trim().split('/');
                 if (dateParts.length !== 3) continue;
                 const date = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
                 
                 // Determine currency
-                const isDOP = moneda.toLowerCase().includes('peso');
+                const monedaStr = moneda || '';
+                const isDOP = monedaStr.toLowerCase().includes('peso') || monedaStr.toLowerCase().includes('dominicano');
                 const currency = isDOP ? 'DOP' : 'USD';
                 const source = isDOP ? 'Credit Card DOP' : 'Credit Card USD';
                 
@@ -3421,24 +3426,42 @@
                 const debitAmt = parseSpanishNumber(debito);
                 const creditAmt = parseSpanishNumber(credito);
                 
-                // Credit card: debits are expenses, credits are payments
-                const amount = debitAmt > 0 ? -debitAmt : creditAmt;
+                // Debit = expense (negative), Credit = payment to card (transfer)
+                let amount = 0;
+                let category = 'Uncategorized';
+                let subcategory = '';
+                let isTransfer = false;
+                
+                if (debitAmt > 0) {
+                    amount = -debitAmt;
+                    const cat = categorizeTransaction(concepto || '');
+                    category = cat.category;
+                    subcategory = cat.subcategory;
+                    isTransfer = cat.isTransfer || false;
+                } else if (creditAmt > 0) {
+                    amount = creditAmt;
+                    category = 'Transfer';
+                    subcategory = 'Credit Card Payment';
+                    isTransfer = true;
+                }
+                
                 if (amount === 0) continue;
                 
                 // Convert to USD
                 const amountUSD = currency === 'DOP' ? amount / fxRates.DOP : amount;
                 
-                const cat = categorizeTransaction(concepto);
-                
                 transactions.push({
-                    id: `CC-${date}-${referencia}`,
+                    id: `CC-${date}-${referencia || i}`,
                     date,
-                    description: concepto,
+                    description: (concepto || '').trim(),
                     source,
                     originalCurrency: currency,
                     originalAmount: amount,
                     amountUSD: amountUSD,
-                    ...cat
+                    category,
+                    subcategory,
+                    isTransfer,
+                    auto: category !== 'Uncategorized'
                 });
             }
             
