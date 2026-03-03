@@ -817,9 +817,9 @@
                     <span class="icon">💰</span>
                     <span>Investment Fund</span>
                 </div>
-                <div class="nav-item" data-page="actuals">
+                <div class="nav-item" data-page="expenses">
                     <span class="icon">📈</span>
-                    <span>Monthly Actuals</span>
+                    <span>Expense Tracker</span>
                 </div>
                 <div class="nav-item" data-page="forecast">
                     <span class="icon">🔮</span>
@@ -1168,6 +1168,7 @@
                     <div class="metric-card">
                         <div class="metric-label">Total Deployed</div>
                         <div class="metric-value" id="invDeployed">$0</div>
+                        <div class="metric-change" id="invDeployedWoW"></div>
                     </div>
                     <div class="metric-card warning">
                         <div class="metric-label">Remaining</div>
@@ -1179,10 +1180,11 @@
                     </div>
                 </div>
 
-                <!-- Founders -->
+                <!-- Founders with WoW -->
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title">Founder Contributions</div>
+                        <div class="card-subtitle" id="invWoWDate">Week over week comparison</div>
                     </div>
                     <div class="founder-grid">
                         <div class="founder-card">
@@ -1190,59 +1192,178 @@
                             <div class="founder-name">José Ureña</div>
                             <div class="founder-amount" id="joseAmount">$0</div>
                             <div class="founder-percent">Committed: $234,006</div>
+                            <div class="metric-change up" id="joseWoW" style="margin-top: 8px;"></div>
                         </div>
                         <div class="founder-card">
                             <div class="founder-avatar">MB</div>
                             <div class="founder-name">Marcos Bonetti</div>
                             <div class="founder-amount" id="marcosAmount">$0</div>
                             <div class="founder-percent">Committed: $234,006</div>
+                            <div class="metric-change up" id="marcosWoW" style="margin-top: 8px;"></div>
                         </div>
                         <div class="founder-card">
                             <div class="founder-avatar">JL</div>
                             <div class="founder-name">Javier del Llano</div>
                             <div class="founder-amount" id="javierAmount">$0</div>
                             <div class="founder-percent">Committed: $234,006</div>
+                            <div class="metric-change up" id="javierWoW" style="margin-top: 8px;"></div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Expense History -->
+                <!-- Charts Row -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <!-- Monthly Deployment Bar Chart -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Monthly Investment Deployment</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="monthlyInvestChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Deployment by Founder Pie Chart -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Deployment by Founder</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="founderPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Investment Deployment Trend -->
                 <div class="card">
                     <div class="card-header">
-                        <div class="card-title">Investment Expense History</div>
-                        <button class="btn btn-secondary btn-sm">Export CSV</button>
+                        <div class="card-title">Cumulative Deployment Over Time</div>
                     </div>
-                    <div class="table-container" style="max-height: 500px; overflow-y: auto;">
-                        <table id="expenseTable">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Description</th>
-                                    <th>Category</th>
-                                    <th>Payor</th>
-                                    <th class="text-right">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody id="expenseBody">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                    <div class="chart-container">
+                        <canvas id="investmentTrendChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Actuals Page -->
-            <div class="page" id="page-actuals">
+            <!-- Expense Tracker Page -->
+            <div class="page" id="page-expenses">
                 <div class="page-header">
-                    <h1 class="page-title">Monthly Actuals</h1>
-                    <p class="page-subtitle">Track actual vs forecast performance</p>
+                    <h1 class="page-title">Expense Tracker</h1>
+                    <p class="page-subtitle">Mission-critical overhead monitoring • Auto-populated from uploads</p>
                 </div>
 
-                <div class="alert warning">
-                    <span class="alert-icon">🚧</span>
-                    <div class="alert-content">
-                        <div class="alert-title">Coming Soon</div>
-                        <div class="alert-message">Monthly P&L reconciliation with actuals from bank statements will be available in the next update.</div>
+                <!-- Month Navigation -->
+                <div class="week-selector" style="margin-bottom: 24px;">
+                    <button class="week-nav-btn" onclick="changeExpenseMonth(-1)">◀</button>
+                    <div class="week-display" id="expenseMonthDisplay">February 2026</div>
+                    <button class="week-nav-btn" onclick="changeExpenseMonth(1)">▶</button>
+                    <button class="btn btn-secondary btn-sm" onclick="goToCurrentExpenseMonth()" style="margin-left: 12px;">Current Month</button>
+                </div>
+
+                <!-- Monthly Summary Cards - Dynamic -->
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Selected Month</div>
+                        <div class="metric-value" id="selectedMonthExpenses">$0</div>
+                        <div class="metric-change" id="selectedMonthChange"></div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Previous Month</div>
+                        <div class="metric-value" id="prevMonthExpenses">$0</div>
+                    </div>
+                    <div class="metric-card positive">
+                        <div class="metric-label">Monthly Average (All Time)</div>
+                        <div class="metric-value" id="avgMonthlyExpense">$0</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Transaction Count</div>
+                        <div class="metric-value" id="expenseTxCount">0</div>
+                    </div>
+                </div>
+
+                <!-- Expense by Category -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Expenses by Category (Selected Month)</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="expenseCategoryChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">Monthly Expense Trend (All Time)</div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="expenseTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed Expense Table -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Expense Breakdown by Category</div>
+                            <div class="card-subtitle">From uploaded transactions (excludes transfers)</div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" onclick="exportMonthlyExpenseCSV()">📥 Export CSV</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Subcategory</th>
+                                    <th class="text-right">Amount</th>
+                                    <th class="text-right">% of Total</th>
+                                    <th class="text-right">vs Prev Month</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseBreakdownBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Individual Transactions for the Month -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">Transaction Details</div>
+                            <div class="card-subtitle" id="txDetailCount">All transactions for selected month</div>
+                        </div>
+                    </div>
+                    <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Source</th>
+                                    <th>Category</th>
+                                    <th class="text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="expenseTxDetailsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Key Expense Items to Watch -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔍 Key Items to Watch</div>
+                    </div>
+                    <div id="expenseAlerts">
+                        <div class="alert success">
+                            <span class="alert-icon">✅</span>
+                            <div class="alert-content">
+                                <div class="alert-title">Affpapa Ending</div>
+                                <div class="alert-message">~$3,400/month savings starting March 2026</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1278,7 +1399,7 @@
                     <div class="upload-zone" id="uploadZone">
                         <div class="upload-icon">📄</div>
                         <div class="upload-title">Drop files here or click to upload</div>
-                        <div class="upload-subtitle">Supports: BanReservas CSV, Credit Card CSV, D24 CSV, XDA PDF (coming soon)</div>
+                        <div class="upload-subtitle">Supports: BanReservas CSV, Credit Card CSV, D24 CSV, Wise CSV</div>
                         <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.xls" style="display: none;">
                     </div>
                     <div id="uploadStatus" style="margin-top: 16px; display: none;">
@@ -1299,15 +1420,79 @@
                             <div class="card-title">📋 Parsed Transactions</div>
                             <div class="card-subtitle" id="parsedCount">0 transactions found</div>
                         </div>
-                        <div style="display: flex; gap: 8px;">
+                    </div>
+                    
+                    <!-- Bulk Actions Bar -->
+                    <div style="display: flex; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 16px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="selectAllParsed" onchange="toggleSelectAllParsed()" style="width: 18px; height: 18px;">
+                            <span style="font-size: 13px;">Select All</span>
+                        </label>
+                        <div style="width: 1px; height: 24px; background: var(--border);"></div>
+                        <select class="form-select" id="bulkCategorySelect" style="width: 200px; font-size: 12px;">
+                            <option value="">Categorize Selected...</option>
+                            <optgroup label="Cost of Sales">
+                                <option value="Cost of Sales|Bonus Expense">Bonus Expense</option>
+                                <option value="Cost of Sales|Directa24 Processing Fees">D24 Fees</option>
+                                <option value="Cost of Sales|Coinsflow Processing Fees">Coinsflow Fees</option>
+                                <option value="Cost of Sales|Flexsy Fees">Flexsy Fees</option>
+                            </optgroup>
+                            <optgroup label="Marketing">
+                                <option value="Marketing|Meta Ads">Meta Ads</option>
+                                <option value="Marketing|Google Ads">Google Ads</option>
+                                <option value="Marketing|Influencer Marketing">Influencer</option>
+                                <option value="Marketing|Affiliate Recruitment Services">Affiliate Recruitment</option>
+                            </optgroup>
+                            <optgroup label="Payroll">
+                                <option value="Payroll|Founders/Management Salaries">Salaries</option>
+                                <option value="Payroll|Payroll Taxes">Payroll Taxes</option>
+                                <option value="Payroll|Employee Benefits">Benefits</option>
+                            </optgroup>
+                            <optgroup label="Technology">
+                                <option value="Technology|Software Subscriptions">Software</option>
+                                <option value="Technology|SMS/Email delivery APIs">SMS/Email</option>
+                            </optgroup>
+                            <optgroup label="G&A">
+                                <option value="G&A|Travel & Entertainment">Travel</option>
+                                <option value="G&A|Office Supplies & Equipment">Office/Equipment</option>
+                            </optgroup>
+                            <optgroup label="Other">
+                                <option value="Other Expenses|Bank/Transaction Fees">Bank Fees</option>
+                            </optgroup>
+                            <optgroup label="Transfers (not expenses)">
+                                <option value="Transfer|Internal">Internal Transfer</option>
+                                <option value="Transfer|Reimbursement">Reimbursement</option>
+                                <option value="Transfer|Funding">Funding</option>
+                                <option value="Transfer|Credit Card Payment">CC Payment</option>
+                            </optgroup>
+                        </select>
+                        <button class="btn btn-secondary btn-sm" onclick="applyBulkCategory()">Apply</button>
+                        <div style="width: 1px; height: 24px; background: var(--border);"></div>
+                        <button class="btn btn-secondary btn-sm" onclick="detectDuplicates()" title="Flag potential duplicates">🔍 Flag Duplicates</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deleteSelectedParsed()" style="color: var(--accent-red);">🗑️ Delete Selected</button>
+                        <div style="margin-left: auto; display: flex; gap: 8px;">
                             <button class="btn btn-secondary btn-sm" onclick="showUncategorizedOnly()">Show Uncategorized</button>
-                            <button class="btn btn-primary btn-sm" onclick="saveImportedTransactions()">💾 Save All</button>
+                            <button class="btn btn-secondary btn-sm" onclick="showDuplicatesOnly()">Show Duplicates</button>
+                            <button class="btn btn-secondary btn-sm" onclick="showAllParsed()">Show All</button>
                         </div>
                     </div>
+                    
+                    <!-- Duplicate Alert -->
+                    <div id="duplicateAlert" style="display: none; margin-bottom: 16px;">
+                        <div class="alert warning">
+                            <span class="alert-icon">⚠️</span>
+                            <div class="alert-content">
+                                <div class="alert-title" id="duplicateAlertTitle">Potential Duplicates Found</div>
+                                <div class="alert-message" id="duplicateAlertMsg">Review flagged items before saving.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="table-container" style="max-height: 500px; overflow-y: auto;">
                         <table>
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;"></th>
                                     <th>Date</th>
                                     <th>Description</th>
                                     <th>Source</th>
@@ -1319,6 +1504,13 @@
                             <tbody id="parsedTransactionsBody">
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+                        <div style="font-size: 13px; color: var(--text-muted);">
+                            <span id="selectedCount">0</span> selected • <span id="duplicateCount">0</span> duplicates flagged
+                        </div>
+                        <button class="btn btn-primary" onclick="saveImportedTransactions()">💾 Save All (excluding flagged duplicates)</button>
                     </div>
                 </div>
 
@@ -1697,6 +1889,8 @@
                     loadWeekData();
                 } else if (page === 'investment') {
                     updateInvestmentPage();
+                } else if (page === 'expenses') {
+                    updateExpenseTracker();
                 }
             });
         });
@@ -2141,16 +2335,478 @@
         function updateInvestmentPage() {
             const weeks = getWeekDates();
             const latest = weeklyData[weeks[weeks.length - 1]];
+            const prev = weeks.length > 1 ? weeklyData[weeks[weeks.length - 2]] : latest;
+            
             const totalInvested = getTotalInvestment(latest);
+            const prevTotalInvested = getTotalInvestment(prev);
             const remaining = TOTAL_COMMITTED - totalInvested;
+            const weeklyDelta = totalInvested - prevTotalInvested;
 
             document.getElementById('invDeployed').textContent = formatCurrency(totalInvested);
             document.getElementById('invRemaining').textContent = formatCurrency(remaining);
             document.getElementById('invRate').textContent = `${((totalInvested / TOTAL_COMMITTED) * 100).toFixed(1)}%`;
+            
+            // WoW for total deployed
+            const wowEl = document.getElementById('invDeployedWoW');
+            if (weeklyDelta > 0) {
+                wowEl.innerHTML = `↑ +${formatCurrency(weeklyDelta)} this week`;
+                wowEl.className = 'metric-change up';
+            } else if (weeklyDelta === 0) {
+                wowEl.innerHTML = `→ No change`;
+                wowEl.className = 'metric-change';
+            }
 
+            // Founder amounts with WoW
             document.getElementById('joseAmount').textContent = formatCurrency(latest.jose);
             document.getElementById('marcosAmount').textContent = formatCurrency(latest.marcos);
             document.getElementById('javierAmount').textContent = formatCurrency(latest.javier);
+            
+            const joseWoW = (latest.jose || 0) - (prev.jose || 0);
+            const marcosWoW = (latest.marcos || 0) - (prev.marcos || 0);
+            const javierWoW = (latest.javier || 0) - (prev.javier || 0);
+            
+            document.getElementById('joseWoW').innerHTML = joseWoW > 0 ? `↑ +${formatCurrency(joseWoW)}` : (joseWoW === 0 ? '→ No change' : '');
+            document.getElementById('joseWoW').className = `metric-change ${joseWoW > 0 ? 'up' : ''}`;
+            document.getElementById('marcosWoW').innerHTML = marcosWoW > 0 ? `↑ +${formatCurrency(marcosWoW)}` : (marcosWoW === 0 ? '→ No change' : '');
+            document.getElementById('marcosWoW').className = `metric-change ${marcosWoW > 0 ? 'up' : ''}`;
+            document.getElementById('javierWoW').innerHTML = javierWoW > 0 ? `↑ +${formatCurrency(javierWoW)}` : (javierWoW === 0 ? '→ No change' : '');
+            document.getElementById('javierWoW').className = `metric-change ${javierWoW > 0 ? 'up' : ''}`;
+            
+            // Render charts
+            renderInvestmentCharts();
+        }
+
+        function renderInvestmentCharts() {
+            const weeks = getWeekDates();
+            
+            // Monthly deployment data
+            const monthlyData = {};
+            for (let i = 1; i < weeks.length; i++) {
+                const curr = weeklyData[weeks[i]];
+                const prev = weeklyData[weeks[i-1]];
+                const delta = getTotalInvestment(curr) - getTotalInvestment(prev);
+                if (delta > 0) {
+                    const month = weeks[i].substring(0, 7);
+                    monthlyData[month] = (monthlyData[month] || 0) + delta;
+                }
+            }
+            
+            const monthLabels = Object.keys(monthlyData).sort();
+            const monthValues = monthLabels.map(m => monthlyData[m]);
+            
+            // Monthly bar chart
+            if (charts.monthlyInvest) charts.monthlyInvest.destroy();
+            charts.monthlyInvest = new Chart(document.getElementById('monthlyInvestChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthLabels.map(m => {
+                        const [y, mo] = m.split('-');
+                        return new Date(y, parseInt(mo)-1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                    }),
+                    datasets: [{
+                        label: 'Deployed',
+                        data: monthValues,
+                        backgroundColor: 'rgba(228, 0, 43, 0.8)',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
+                        x: { grid: { display: false }, ticks: { color: '#71717a' } }
+                    }
+                }
+            });
+            
+            // Founder pie chart
+            const latest = weeklyData[weeks[weeks.length - 1]];
+            if (charts.founderPie) charts.founderPie.destroy();
+            charts.founderPie = new Chart(document.getElementById('founderPieChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['José', 'Marcos', 'Javier'],
+                    datasets: [{
+                        data: [latest.jose, latest.marcos, latest.javier],
+                        backgroundColor: ['#e4002b', '#3b82f6', '#22c55e'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom',
+                            labels: { color: '#a1a1aa', usePointStyle: true }
+                        } 
+                    }
+                }
+            });
+            
+            // Cumulative trend
+            const trendLabels = weeks.map(w => new Date(w).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const trendData = weeks.map(w => getTotalInvestment(weeklyData[w]));
+            
+            if (charts.investmentTrend) charts.investmentTrend.destroy();
+            charts.investmentTrend = new Chart(document.getElementById('investmentTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: trendLabels,
+                    datasets: [{
+                        label: 'Cumulative Deployed',
+                        data: trendData,
+                        borderColor: '#e4002b',
+                        backgroundColor: 'rgba(228, 0, 43, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }, {
+                        label: 'Total Committed',
+                        data: Array(weeks.length).fill(TOTAL_COMMITTED),
+                        borderColor: '#3b82f6',
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'top',
+                            labels: { color: '#a1a1aa', usePointStyle: true }
+                        } 
+                    },
+                    scales: {
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#71717a' },
+                            max: 750000
+                        },
+                        x: { grid: { display: false }, ticks: { color: '#71717a', maxTicksLimit: 12 } }
+                    }
+                }
+            });
+        }
+
+        // ========================================
+        // EXPENSE TRACKER
+        // ========================================
+        let currentExpenseMonth = new Date().toISOString().substring(0, 7); // YYYY-MM format
+        
+        function changeExpenseMonth(delta) {
+            const [year, month] = currentExpenseMonth.split('-').map(Number);
+            let newMonth = month + delta;
+            let newYear = year;
+            
+            if (newMonth > 12) {
+                newMonth = 1;
+                newYear++;
+            } else if (newMonth < 1) {
+                newMonth = 12;
+                newYear--;
+            }
+            
+            currentExpenseMonth = `${newYear}-${String(newMonth).padStart(2, '0')}`;
+            updateExpenseTracker();
+        }
+        
+        function goToCurrentExpenseMonth() {
+            currentExpenseMonth = new Date().toISOString().substring(0, 7);
+            updateExpenseTracker();
+        }
+        
+        function getMonthExpenses(monthStr) {
+            return savedTransactions.filter(tx => 
+                !tx.isTransfer && tx.category !== 'Transfer' && tx.amountUSD < 0 && tx.date.startsWith(monthStr)
+            );
+        }
+        
+        function getMonthTotal(monthStr) {
+            return getMonthExpenses(monthStr).reduce((sum, tx) => sum + Math.abs(tx.amountUSD), 0);
+        }
+        
+        function getPreviousMonth(monthStr) {
+            const [year, month] = monthStr.split('-').map(Number);
+            let prevMonth = month - 1;
+            let prevYear = year;
+            if (prevMonth < 1) {
+                prevMonth = 12;
+                prevYear--;
+            }
+            return `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+        }
+        
+        function updateExpenseTracker() {
+            // Update month display
+            const [year, month] = currentExpenseMonth.split('-');
+            const monthDate = new Date(year, month - 1);
+            document.getElementById('expenseMonthDisplay').textContent = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            // Get expenses for selected and previous months
+            const selectedExpenses = getMonthExpenses(currentExpenseMonth);
+            const selectedTotal = selectedExpenses.reduce((sum, tx) => sum + Math.abs(tx.amountUSD), 0);
+            
+            const prevMonth = getPreviousMonth(currentExpenseMonth);
+            const prevTotal = getMonthTotal(prevMonth);
+            
+            // Calculate all-time average
+            const allExpenses = savedTransactions.filter(tx => 
+                !tx.isTransfer && tx.category !== 'Transfer' && tx.amountUSD < 0
+            );
+            const monthlyTotals = {};
+            allExpenses.forEach(tx => {
+                const m = tx.date.substring(0, 7);
+                monthlyTotals[m] = (monthlyTotals[m] || 0) + Math.abs(tx.amountUSD);
+            });
+            const monthsWithData = Object.keys(monthlyTotals).length;
+            const avgMonthly = monthsWithData > 0 ? Object.values(monthlyTotals).reduce((a, b) => a + b, 0) / monthsWithData : 0;
+            
+            // Update summary cards
+            document.getElementById('selectedMonthExpenses').textContent = formatCurrency(selectedTotal);
+            document.getElementById('prevMonthExpenses').textContent = formatCurrency(prevTotal);
+            document.getElementById('avgMonthlyExpense').textContent = formatCurrency(avgMonthly);
+            document.getElementById('expenseTxCount').textContent = selectedExpenses.length;
+            
+            // Month over month change
+            const changeEl = document.getElementById('selectedMonthChange');
+            if (prevTotal > 0) {
+                const change = selectedTotal - prevTotal;
+                const changePct = ((change / prevTotal) * 100).toFixed(1);
+                if (change > 0) {
+                    changeEl.innerHTML = `↑ +${formatCurrency(change)} (+${changePct}%) vs prev`;
+                    changeEl.className = 'metric-change down'; // Up is bad for expenses
+                } else if (change < 0) {
+                    changeEl.innerHTML = `↓ ${formatCurrency(change)} (${changePct}%) vs prev`;
+                    changeEl.className = 'metric-change up'; // Down is good for expenses
+                } else {
+                    changeEl.innerHTML = `→ No change vs prev`;
+                    changeEl.className = 'metric-change';
+                }
+            } else {
+                changeEl.innerHTML = '';
+            }
+            
+            // Render charts
+            renderExpenseCharts(selectedExpenses, currentExpenseMonth);
+            updateExpenseBreakdown();
+            renderExpenseTxDetails();
+        }
+
+        function renderExpenseCharts(expenses, selectedMonth) {
+            // Category breakdown for selected month
+            const categoryTotals = {};
+            expenses.forEach(tx => {
+                const cat = tx.category || 'Uncategorized';
+                categoryTotals[cat] = (categoryTotals[cat] || 0) + Math.abs(tx.amountUSD);
+            });
+            
+            const catLabels = Object.keys(categoryTotals);
+            const catValues = catLabels.map(c => categoryTotals[c]);
+            const catColors = {
+                'Cost of Sales': '#e4002b',
+                'Marketing': '#3b82f6',
+                'Payroll': '#22c55e',
+                'Technology': '#a855f7',
+                'G&A': '#eab308',
+                'Other Expenses': '#71717a',
+                'Uncategorized': '#404040'
+            };
+            
+            if (charts.expenseCategory) charts.expenseCategory.destroy();
+            charts.expenseCategory = new Chart(document.getElementById('expenseCategoryChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: catLabels,
+                    datasets: [{
+                        data: catValues,
+                        backgroundColor: catLabels.map(c => catColors[c] || '#666'),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { 
+                            position: 'right',
+                            labels: { color: '#a1a1aa', usePointStyle: true }
+                        } 
+                    }
+                }
+            });
+            
+            // Monthly trend (all time)
+            const allExpenses = savedTransactions.filter(tx => 
+                !tx.isTransfer && tx.category !== 'Transfer' && tx.amountUSD < 0
+            );
+            const monthlyExpenses = {};
+            allExpenses.forEach(tx => {
+                const month = tx.date.substring(0, 7);
+                monthlyExpenses[month] = (monthlyExpenses[month] || 0) + Math.abs(tx.amountUSD);
+            });
+            
+            const monthLabels = Object.keys(monthlyExpenses).sort();
+            const monthValues = monthLabels.map(m => monthlyExpenses[m]);
+            
+            // Highlight selected month
+            const backgroundColors = monthLabels.map(m => 
+                m === selectedMonth ? 'rgba(228, 0, 43, 1)' : 'rgba(228, 0, 43, 0.4)'
+            );
+            
+            if (charts.expenseTrend) charts.expenseTrend.destroy();
+            charts.expenseTrend = new Chart(document.getElementById('expenseTrendChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthLabels.map(m => {
+                        const [y, mo] = m.split('-');
+                        return new Date(y, parseInt(mo)-1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                    }),
+                    datasets: [{
+                        label: 'Expenses',
+                        data: monthValues,
+                        backgroundColor: backgroundColors,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
+                        x: { grid: { display: false }, ticks: { color: '#71717a' } }
+                    }
+                }
+            });
+        }
+
+        function updateExpenseBreakdown() {
+            const expenses = getMonthExpenses(currentExpenseMonth);
+            const prevMonth = getPreviousMonth(currentExpenseMonth);
+            const prevExpenses = getMonthExpenses(prevMonth);
+            
+            // Group current month by category and subcategory
+            const breakdown = {};
+            let total = 0;
+            expenses.forEach(tx => {
+                const key = `${tx.category}|${tx.subcategory}`;
+                breakdown[key] = (breakdown[key] || 0) + Math.abs(tx.amountUSD);
+                total += Math.abs(tx.amountUSD);
+            });
+            
+            // Group previous month
+            const prevBreakdown = {};
+            prevExpenses.forEach(tx => {
+                const key = `${tx.category}|${tx.subcategory}`;
+                prevBreakdown[key] = (prevBreakdown[key] || 0) + Math.abs(tx.amountUSD);
+            });
+            
+            // Sort by amount descending
+            const sorted = Object.entries(breakdown).sort((a, b) => b[1] - a[1]);
+            
+            const tbody = document.getElementById('expenseBreakdownBody');
+            if (sorted.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">No expense data for this month. Upload statements in Upload Center.</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = sorted.map(([key, amount]) => {
+                const [cat, subcat] = key.split('|');
+                const pct = (amount / total * 100).toFixed(1);
+                const prevAmt = prevBreakdown[key] || 0;
+                const change = amount - prevAmt;
+                let changeStr = '-';
+                let changeClass = '';
+                if (prevAmt > 0) {
+                    const changePct = ((change / prevAmt) * 100).toFixed(0);
+                    if (change > 0) {
+                        changeStr = `↑ +${changePct}%`;
+                        changeClass = 'color: var(--accent-red);';
+                    } else if (change < 0) {
+                        changeStr = `↓ ${changePct}%`;
+                        changeClass = 'color: var(--accent-green);';
+                    } else {
+                        changeStr = '→ 0%';
+                    }
+                } else if (amount > 0) {
+                    changeStr = '🆕 New';
+                    changeClass = 'color: var(--accent-yellow);';
+                }
+                return `
+                    <tr>
+                        <td>${cat}</td>
+                        <td>${subcat || '-'}</td>
+                        <td class="text-right text-mono">${formatCurrency(amount, 2)}</td>
+                        <td class="text-right">${pct}%</td>
+                        <td class="text-right" style="${changeClass}">${changeStr}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Add total row
+            const prevTotal = Object.values(prevBreakdown).reduce((a, b) => a + b, 0);
+            const totalChange = total - prevTotal;
+            let totalChangeStr = '-';
+            if (prevTotal > 0) {
+                const pct = ((totalChange / prevTotal) * 100).toFixed(0);
+                totalChangeStr = totalChange > 0 ? `↑ +${pct}%` : `↓ ${pct}%`;
+            }
+            tbody.innerHTML += `
+                <tr style="font-weight: 700; background: var(--bg-tertiary);">
+                    <td colspan="2">TOTAL</td>
+                    <td class="text-right text-mono">${formatCurrency(total, 2)}</td>
+                    <td class="text-right">100%</td>
+                    <td class="text-right">${totalChangeStr}</td>
+                </tr>
+            `;
+        }
+        
+        function renderExpenseTxDetails() {
+            const expenses = getMonthExpenses(currentExpenseMonth);
+            const tbody = document.getElementById('expenseTxDetailsBody');
+            document.getElementById('txDetailCount').textContent = `${expenses.length} transactions for selected month`;
+            
+            if (expenses.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">No transactions for this month</td></tr>';
+                return;
+            }
+            
+            // Sort by date descending
+            expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            tbody.innerHTML = expenses.map(tx => `
+                <tr>
+                    <td class="text-mono">${tx.date}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${tx.description}">${tx.description}</td>
+                    <td><span style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px; font-size: 11px;">${tx.source}</span></td>
+                    <td>${tx.category}${tx.subcategory ? ' → ' + tx.subcategory : ''}</td>
+                    <td class="text-right text-mono" style="color: var(--accent-red);">${formatCurrency(tx.amountUSD, 2)}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function exportMonthlyExpenseCSV() {
+            const expenses = getMonthExpenses(currentExpenseMonth);
+            const headers = ['Date', 'Description', 'Source', 'Category', 'Subcategory', 'Amount USD'];
+            const rows = expenses.map(tx => [
+                tx.date,
+                `"${tx.description.replace(/"/g, '""')}"`,
+                tx.source,
+                tx.category,
+                tx.subcategory,
+                tx.amountUSD.toFixed(2)
+            ]);
+            
+            const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `appuesta_expenses_${currentExpenseMonth}.csv`;
+            a.click();
         }
 
         // ========================================
@@ -2443,6 +3099,13 @@
             { pattern: 'FACEBK', category: 'Marketing', subcategory: 'Meta Ads' },
             { pattern: 'META', category: 'Marketing', subcategory: 'Meta Ads' },
             { pattern: 'GOOGLE ADS', category: 'Marketing', subcategory: 'Google Ads' },
+            { pattern: 'AFFPAPA', category: 'Marketing', subcategory: 'Affiliate Recruitment Services' },
+            
+            // Cost of Sales / Providers
+            { pattern: 'ISLAROJA', category: 'Cost of Sales', subcategory: 'Flexsy Fees' },
+            { pattern: 'ABUNDANTIA', category: 'Cost of Sales', subcategory: 'Flexsy Fees' },
+            { pattern: 'Abudantia', category: 'Cost of Sales', subcategory: 'Flexsy Fees' },
+            { pattern: 'Deposit Fee', category: 'Cost of Sales', subcategory: 'Directa24 Processing Fees' },
             
             // Bank Fees & Transfers
             { pattern: 'PAGO DGII', category: 'Other Expenses', subcategory: 'Bank/Transaction Fees' },
@@ -2456,6 +3119,8 @@
             { pattern: 'COMISION SOBREGIRO', category: 'Other Expenses', subcategory: 'Bank/Transaction Fees' },
             { pattern: 'Transaction Fees', category: 'Other Expenses', subcategory: 'Bank/Transaction Fees' },
             { pattern: 'Lemino Payments', category: 'Other Expenses', subcategory: 'Bank/Transaction Fees' },
+            { pattern: 'PAYDO', category: 'Other Expenses', subcategory: 'Bank/Transaction Fees' },
+            { pattern: 'Wise Transfer Fee', category: 'Other Expenses', subcategory: 'Bank/Transaction Fees' },
             
             // Internal Transfers (not expenses)
             { pattern: 'COMPRA DIVISA', category: 'Transfer', subcategory: 'Internal' },
@@ -2463,15 +3128,17 @@
             { pattern: 'DB AUTORIZADO CORTE', category: 'Transfer', subcategory: 'Credit Card Payment' },
             { pattern: 'CR TRANSFERENCIA', category: 'Transfer', subcategory: 'Funding' },
             { pattern: 'PAGO RECIBIDO', category: 'Transfer', subcategory: 'Credit Card Payment' },
+            { pattern: 'JJM SPORTS', category: 'Transfer', subcategory: 'Funding' },
             
-            // Transfers to individuals (reimbursements)
+            // Transfers to individuals (reimbursements - all 3 founders)
             { pattern: 'TRANSFERENCIA A JOSE MIGUEL', category: 'Transfer', subcategory: 'Reimbursement' },
             { pattern: 'PAGOS AL INSTANTE BCRD A JOSE', category: 'Transfer', subcategory: 'Reimbursement' },
+            { pattern: 'TRANSFERENCIA A JOSE', category: 'Transfer', subcategory: 'Reimbursement' },
+            { pattern: 'TRANSFERENCIA A MARCOS', category: 'Transfer', subcategory: 'Reimbursement' },
+            { pattern: 'PAGOS AL INSTANTE BCRD A MARCOS', category: 'Transfer', subcategory: 'Reimbursement' },
+            { pattern: 'TRANSFERENCIA A JAVIER', category: 'Transfer', subcategory: 'Reimbursement' },
+            { pattern: 'PAGOS AL INSTANTE BCRD A JAVIER', category: 'Transfer', subcategory: 'Reimbursement' },
             { pattern: 'TRANSFERENCIA ACH', category: 'Transfer', subcategory: 'Vendor Payment' },
-            
-            // Cost of Sales
-            { pattern: 'Abudantia', category: 'Cost of Sales', subcategory: 'Flexsy Fees' },
-            { pattern: 'Deposit Fee', category: 'Cost of Sales', subcategory: 'Directa24 Processing Fees' },
             
             // D24 specific
             { pattern: 'D24 Deposit', category: 'Transfer', subcategory: 'Player Deposit' },
@@ -2613,6 +3280,9 @@
             } else if (firstLine.includes('producto') && firstLine.includes('referencia') && firstLine.includes('moneda')) {
                 // Credit Card format
                 return parseCreditCardCSV(lines);
+            } else if (firstLine.includes('id') && firstLine.includes('status') && firstLine.includes('direction') && firstLine.includes('target name')) {
+                // Wise format
+                return parseWiseCSV(lines);
             }
             
             return transactions;
@@ -2813,6 +3483,112 @@
                         category: 'Transfer',
                         subcategory: 'Player Withdrawal',
                         isTransfer: true,
+                        auto: true
+                    });
+                }
+            }
+            
+            return transactions;
+        }
+
+        function parseWiseCSV(lines) {
+            const transactions = [];
+            
+            // Parse header to get column indices
+            const headers = parseCSVLine(lines[0]);
+            const idxId = headers.findIndex(h => h.toLowerCase() === 'id');
+            const idxStatus = headers.findIndex(h => h.toLowerCase() === 'status');
+            const idxDirection = headers.findIndex(h => h.toLowerCase() === 'direction');
+            const idxCreated = headers.findIndex(h => h.toLowerCase() === 'created on');
+            const idxSourceFee = headers.findIndex(h => h.toLowerCase() === 'source fee amount');
+            const idxSourceAmount = headers.findIndex(h => h.toLowerCase().includes('source amount'));
+            const idxSourceCurrency = headers.findIndex(h => h.toLowerCase() === 'source currency');
+            const idxTargetName = headers.findIndex(h => h.toLowerCase() === 'target name');
+            const idxTargetAmount = headers.findIndex(h => h.toLowerCase().includes('target amount'));
+            const idxTargetCurrency = headers.findIndex(h => h.toLowerCase() === 'target currency');
+            const idxReference = headers.findIndex(h => h.toLowerCase() === 'reference');
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                if (!line.trim()) continue;
+                
+                const fields = parseCSVLine(line);
+                
+                const id = fields[idxId] || '';
+                const status = fields[idxStatus] || '';
+                const direction = fields[idxDirection] || '';
+                const createdOn = fields[idxCreated] || '';
+                const sourceFee = parseFloat(fields[idxSourceFee]) || 0;
+                const sourceAmount = parseFloat(fields[idxSourceAmount]) || 0;
+                const sourceCurrency = fields[idxSourceCurrency] || 'USD';
+                const targetName = fields[idxTargetName] || '';
+                const targetAmount = parseFloat(fields[idxTargetAmount]) || 0;
+                const targetCurrency = fields[idxTargetCurrency] || '';
+                const reference = fields[idxReference] || '';
+                
+                // Only process completed outgoing transfers
+                if (status !== 'COMPLETED' || direction !== 'OUT') continue;
+                
+                // Parse date (YYYY-MM-DD HH:MM:SS format)
+                const date = createdOn.split(' ')[0];
+                
+                // Total amount including fee
+                const totalAmountUSD = sourceAmount + sourceFee;
+                
+                // Categorize based on recipient
+                let category = 'Uncategorized';
+                let subcategory = '';
+                let isTransfer = false;
+                
+                const targetUpper = targetName.toUpperCase();
+                
+                if (targetUpper.includes('AFFPAPA')) {
+                    category = 'Marketing';
+                    subcategory = 'Affiliate Recruitment Services';
+                } else if (targetUpper.includes('ISLAROJA')) {
+                    category = 'Cost of Sales';
+                    subcategory = 'Flexsy Fees';
+                } else if (targetUpper.includes('JJM SPORTS')) {
+                    category = 'Transfer';
+                    subcategory = 'Funding';
+                    isTransfer = true;
+                } else if (targetUpper.includes('ABUNDANTIA')) {
+                    category = 'Cost of Sales';
+                    subcategory = 'Flexsy Fees';
+                } else if (targetUpper.includes('PAYDO') || targetUpper.includes('LEMINO')) {
+                    category = 'Other Expenses';
+                    subcategory = 'Bank/Transaction Fees';
+                }
+                
+                const description = `${targetName}${reference ? ' - ' + reference : ''}`;
+                
+                transactions.push({
+                    id: `WISE-${id}`,
+                    date,
+                    description,
+                    source: 'Wise',
+                    originalCurrency: sourceCurrency,
+                    originalAmount: -totalAmountUSD,
+                    amountUSD: -totalAmountUSD,
+                    category,
+                    subcategory,
+                    isTransfer,
+                    auto: category !== 'Uncategorized'
+                });
+                
+                // Also add the fee as a separate transaction if significant
+                if (sourceFee > 1) {
+                    transactions.push({
+                        id: `WISE-FEE-${id}`,
+                        date,
+                        description: `Wise Transfer Fee - ${targetName}`,
+                        source: 'Wise',
+                        originalCurrency: sourceCurrency,
+                        originalAmount: -sourceFee,
+                        amountUSD: -sourceFee,
+                        category: 'Other Expenses',
+                        subcategory: 'Bank/Transaction Fees',
+                        isTransfer: false,
                         auto: true
                     });
                 }
