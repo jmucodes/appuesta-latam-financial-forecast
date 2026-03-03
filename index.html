@@ -3296,15 +3296,17 @@
             // Detect file type by headers or content
             const firstLine = lines[0].toLowerCase();
             
-            if (firstLine.includes('producto') && firstLine.includes('fecha') && firstLine.includes('concepto')) {
+            // Credit Card MUST be checked before BanReservas (both have producto/fecha/concepto)
+            // Credit Card has 'moneda' column which BanReservas doesn't
+            if (firstLine.includes('producto') && firstLine.includes('moneda')) {
+                // Credit Card format
+                return parseCreditCardCSV(lines);
+            } else if (firstLine.includes('producto') && firstLine.includes('fecha') && firstLine.includes('concepto')) {
                 // BanReservas format
                 return parseBanReservasCSV(lines, filename);
             } else if (firstLine.includes('date') && firstLine.includes('deposit total')) {
                 // D24 format
                 return parseD24CSV(lines);
-            } else if (firstLine.includes('producto') && firstLine.includes('referencia') && firstLine.includes('moneda')) {
-                // Credit Card format
-                return parseCreditCardCSV(lines);
             } else if (firstLine.includes('id') && firstLine.includes('status') && firstLine.includes('direction') && firstLine.includes('target name')) {
                 // Wise format
                 return parseWiseCSV(lines);
@@ -3398,8 +3400,7 @@
         function parseCreditCardCSV(lines) {
             const transactions = [];
             
-            // Start from line 1 (skip header at line 0)
-            for (let i = 1; i < lines.length; i++) {
+            for (let i = 2; i < lines.length; i++) {
                 const line = lines[i];
                 if (!line.trim()) continue;
                 
@@ -3408,17 +3409,13 @@
                 
                 const [producto, fecha, referencia, concepto, moneda, debito, credito] = fields;
                 
-                // Skip if no valid date
-                if (!fecha || !fecha.includes('/')) continue;
-                
                 // Parse date
-                const dateParts = fecha.trim().split('/');
+                const dateParts = fecha.split('/');
                 if (dateParts.length !== 3) continue;
                 const date = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
                 
                 // Determine currency
-                const monedaStr = moneda || '';
-                const isDOP = monedaStr.toLowerCase().includes('peso') || monedaStr.toLowerCase().includes('dominicano');
+                const isDOP = moneda.toLowerCase().includes('peso');
                 const currency = isDOP ? 'DOP' : 'USD';
                 const source = isDOP ? 'Credit Card DOP' : 'Credit Card USD';
                 
@@ -3426,42 +3423,24 @@
                 const debitAmt = parseSpanishNumber(debito);
                 const creditAmt = parseSpanishNumber(credito);
                 
-                // Debit = expense (negative), Credit = payment to card (transfer)
-                let amount = 0;
-                let category = 'Uncategorized';
-                let subcategory = '';
-                let isTransfer = false;
-                
-                if (debitAmt > 0) {
-                    amount = -debitAmt;
-                    const cat = categorizeTransaction(concepto || '');
-                    category = cat.category;
-                    subcategory = cat.subcategory;
-                    isTransfer = cat.isTransfer || false;
-                } else if (creditAmt > 0) {
-                    amount = creditAmt;
-                    category = 'Transfer';
-                    subcategory = 'Credit Card Payment';
-                    isTransfer = true;
-                }
-                
+                // Credit card: debits are expenses, credits are payments
+                const amount = debitAmt > 0 ? -debitAmt : creditAmt;
                 if (amount === 0) continue;
                 
                 // Convert to USD
                 const amountUSD = currency === 'DOP' ? amount / fxRates.DOP : amount;
                 
+                const cat = categorizeTransaction(concepto);
+                
                 transactions.push({
-                    id: `CC-${date}-${referencia || i}`,
+                    id: `CC-${date}-${referencia}`,
                     date,
-                    description: (concepto || '').trim(),
+                    description: concepto,
                     source,
                     originalCurrency: currency,
                     originalAmount: amount,
                     amountUSD: amountUSD,
-                    category,
-                    subcategory,
-                    isTransfer,
-                    auto: category !== 'Uncategorized'
+                    ...cat
                 });
             }
             
