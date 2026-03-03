@@ -3249,11 +3249,26 @@
                 const ext = file.name.split('.').pop().toLowerCase();
                 
                 if (ext === 'csv') {
-                    const text = await file.text();
+                    let text = await file.text();
+                    
+                    // Fix UTF-16 encoding issue (spaces between characters)
+                    // Detect by checking if header has spaced characters
+                    if (text.substring(0, 50).includes(' r ') || text.substring(0, 50).includes(' x ')) {
+                        // Remove spaces between single characters but keep real spaces
+                        text = text.split('\n').map(line => {
+                            // Check if line has the spaced pattern
+                            if (line.match(/^[A-Za-z\u00C0-\u00FF] [A-Za-z\u00C0-\u00FF] /)) {
+                                return line.replace(/ (?=.)/g, '').replace(/\u0000/g, '');
+                            }
+                            return line.replace(/\u0000/g, '');
+                        }).join('\n');
+                    }
+                    // Also remove any null bytes (common in UTF-16)
+                    text = text.replace(/\u0000/g, '');
+                    
                     const transactions = parseCSV(text, file.name);
                     parsedTransactionsTemp.push(...transactions);
                 } else if (ext === 'xlsx' || ext === 'xls') {
-                    // For Excel files, we'd need SheetJS
                     alert('Excel parsing coming soon. Please export as CSV for now.');
                 }
             }
@@ -3261,6 +3276,8 @@
             if (parsedTransactionsTemp.length > 0) {
                 showUploadStatus(`Successfully parsed ${parsedTransactionsTemp.length} transactions from ${files.length} file(s)`);
                 renderParsedTransactions();
+            } else {
+                alert('No transactions found. The file format may not be recognized.');
             }
         }
 
