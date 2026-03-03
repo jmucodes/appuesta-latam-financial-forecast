@@ -3249,22 +3249,29 @@
                 const ext = file.name.split('.').pop().toLowerCase();
                 
                 if (ext === 'csv') {
-                    let text = await file.text();
+                    // Read as ArrayBuffer first to detect encoding
+                    const arrayBuffer = await file.arrayBuffer();
+                    let text = '';
                     
-                    // Fix UTF-16 encoding issue (spaces between characters)
-                    // Detect by checking if header has spaced characters
-                    if (text.substring(0, 50).includes(' r ') || text.substring(0, 50).includes(' x ')) {
-                        // Remove spaces between single characters but keep real spaces
-                        text = text.split('\n').map(line => {
-                            // Check if line has the spaced pattern
-                            if (line.match(/^[A-Za-z\u00C0-\u00FF] [A-Za-z\u00C0-\u00FF] /)) {
-                                return line.replace(/ (?=.)/g, '').replace(/\u0000/g, '');
-                            }
-                            return line.replace(/\u0000/g, '');
-                        }).join('\n');
+                    // Check for UTF-16 BOM or null bytes (UTF-16 indicator)
+                    const bytes = new Uint8Array(arrayBuffer);
+                    const hasUTF16BOM = (bytes[0] === 0xFF && bytes[1] === 0xFE) || (bytes[0] === 0xFE && bytes[1] === 0xFF);
+                    const hasNullBytes = bytes.length > 10 && (bytes[1] === 0 || bytes[3] === 0 || bytes[5] === 0);
+                    
+                    if (hasUTF16BOM || hasNullBytes) {
+                        // Decode as UTF-16LE (most common on Windows)
+                        const decoder = new TextDecoder('utf-16le');
+                        text = decoder.decode(arrayBuffer);
+                    } else {
+                        // Regular UTF-8
+                        const decoder = new TextDecoder('utf-8');
+                        text = decoder.decode(arrayBuffer);
                     }
-                    // Also remove any null bytes (common in UTF-16)
-                    text = text.replace(/\u0000/g, '');
+                    
+                    // Remove BOM if present
+                    if (text.charCodeAt(0) === 0xFEFF) {
+                        text = text.substring(1);
+                    }
                     
                     const transactions = parseCSV(text, file.name);
                     parsedTransactionsTemp.push(...transactions);
@@ -3277,7 +3284,8 @@
                 showUploadStatus(`Successfully parsed ${parsedTransactionsTemp.length} transactions from ${files.length} file(s)`);
                 renderParsedTransactions();
             } else {
-                alert('No transactions found. The file format may not be recognized.');
+                alert('No transactions found. The file format may not be recognized. Check console for details.');
+                console.log('File detection failed. First 200 chars of file:', text?.substring(0, 200));
             }
         }
 
