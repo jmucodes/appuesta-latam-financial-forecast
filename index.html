@@ -1399,7 +1399,7 @@
                     <div class="upload-zone" id="uploadZone">
                         <div class="upload-icon">📄</div>
                         <div class="upload-title">Drop files here or click to upload</div>
-                        <div class="upload-subtitle">Supports: BanReservas CSV, Credit Card CSV, D24 CSV, Wise CSV</div>
+                        <div class="upload-subtitle">Supports: BanReservas CSV, Credit Card CSV, D24 CSV, Wise CSV, Notion Expense Report CSV</div>
                         <input type="file" id="fileInput" multiple accept=".csv,.xlsx,.xls" style="display: none;">
                     </div>
                     <div id="uploadStatus" style="margin-top: 16px; display: none;">
@@ -2447,7 +2447,7 @@
             });
             
             // Cumulative trend
-            const trendLabels = weeks.map(w => new Date(w).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+            const trendLabels = weeks.map(w => new Date(w).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }));
             const trendData = weeks.map(w => getTotalInvestment(weeklyData[w]));
             
             if (charts.investmentTrend) charts.investmentTrend.destroy();
@@ -3283,6 +3283,9 @@
             } else if (firstLine.includes('id') && firstLine.includes('status') && firstLine.includes('direction') && firstLine.includes('target name')) {
                 // Wise format
                 return parseWiseCSV(lines);
+            } else if (firstLine.includes('expense') && firstLine.includes('expense source') && firstLine.includes('payor') && firstLine.includes('total spend')) {
+                // Notion Expense Report format
+                return parseNotionExpenseCSV(lines);
             }
             
             return transactions;
@@ -3592,6 +3595,179 @@
                         auto: true
                     });
                 }
+            }
+            
+            return transactions;
+        }
+
+        function parseNotionExpenseCSV(lines) {
+            const transactions = [];
+            
+            // Parse header to get column indices
+            const headers = parseCSVLine(lines[0]);
+            const idxExpense = headers.findIndex(h => h.toLowerCase().trim() === 'expense');
+            const idxDescription = headers.findIndex(h => h.toLowerCase().includes('description'));
+            const idxSource = headers.findIndex(h => h.toLowerCase().includes('expense source'));
+            const idxType = headers.findIndex(h => h.toLowerCase().includes('expense type'));
+            const idxDate = headers.findIndex(h => h.toLowerCase().includes('payment date'));
+            const idxPayor = headers.findIndex(h => h.toLowerCase().includes('payor'));
+            const idxAmount = headers.findIndex(h => h.toLowerCase().includes('total spend'));
+            
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i];
+                if (!line.trim()) continue;
+                
+                const fields = parseCSVLine(line);
+                
+                const expense = fields[idxExpense] || '';
+                const description = fields[idxDescription] || '';
+                const source = fields[idxSource] || '';
+                const expenseType = fields[idxType] || '';
+                const dateStr = fields[idxDate] || '';
+                const payor = fields[idxPayor] || '';
+                const amountStr = fields[idxAmount] || '';
+                
+                // Skip empty rows
+                if (!expense || !dateStr || !amountStr || amountStr === '$0.00') continue;
+                
+                // Parse date (e.g., "May 13, 2024")
+                const parsedDate = new Date(dateStr);
+                if (isNaN(parsedDate.getTime())) continue;
+                const date = parsedDate.toISOString().split('T')[0];
+                
+                // Parse amount
+                const amount = parseSpanishNumber(amountStr);
+                if (amount === 0) continue;
+                
+                // Categorize based on expense name and type
+                let category = 'Uncategorized';
+                let subcategory = '';
+                let isTransfer = false;
+                
+                const expenseLower = expense.toLowerCase();
+                const descLower = description.toLowerCase();
+                const typeLower = expenseType.toLowerCase();
+                
+                if (typeLower.includes('legal')) {
+                    category = 'G&A';
+                    subcategory = 'Professional Services - Legal';
+                } else if (typeLower.includes('consultancy')) {
+                    category = 'G&A';
+                    subcategory = 'Professional Services - Consulting';
+                } else if (expenseLower.includes('salary') || expenseLower.includes('salario')) {
+                    category = 'Payroll';
+                    subcategory = 'Founders/Management Salaries';
+                } else if (expenseLower.includes('gamingtec') || expenseLower.includes('xp integration') || expenseLower.includes('xp feb') || expenseLower.includes('xp payment')) {
+                    category = 'Technology';
+                    subcategory = 'Platform Setup Fees';
+                } else if (expenseLower.includes('smartico') || expenseLower.includes('tap')) {
+                    category = 'Technology';
+                    subcategory = 'Affiliate Platform Smartico - Tap';
+                } else if (expenseLower.includes('google workspace') || expenseLower.includes('slack') || expenseLower.includes('monday')) {
+                    category = 'Technology';
+                    subcategory = 'Software Subscriptions';
+                } else if (expenseLower.includes('chatbot') || expenseLower.includes('manychat')) {
+                    category = 'Technology';
+                    subcategory = 'LiveChat, ChatBot, HelpDesk Services';
+                } else if (expenseLower.includes('accounting') || expenseLower.includes('gacisa')) {
+                    category = 'Technology';
+                    subcategory = 'Accounting Software';
+                } else if (expenseLower.includes('cloudflare')) {
+                    category = 'Technology';
+                    subcategory = 'Cloud Hosting / Server Costs';
+                } else if (expenseLower.includes('domain') || expenseLower.includes('marcaria')) {
+                    category = 'Technology';
+                    subcategory = 'Domain Registration';
+                } else if (expenseLower.includes('shufti')) {
+                    category = 'Technology';
+                    subcategory = 'KYC/Verification Services';
+                } else if (expenseLower.includes('affpapa')) {
+                    category = 'Marketing';
+                    subcategory = 'Affiliate Recruitment Services';
+                } else if (expenseLower.includes('influencer') || expenseLower.includes('pasionfutbolera') || expenseLower.includes('la10_ec')) {
+                    category = 'Marketing';
+                    subcategory = 'Influencer Marketing';
+                } else if (expenseLower.includes('boosting') || expenseLower.includes('ig -')) {
+                    category = 'Marketing';
+                    subcategory = 'Social Media Marketing Boosting';
+                } else if (expenseLower.includes('linkedin')) {
+                    category = 'Marketing';
+                    subcategory = 'Recruitment Marketing';
+                } else if (expenseLower.includes('flexsy') || descLower.includes('flexsy')) {
+                    category = 'Cost of Sales';
+                    subcategory = 'Flexsy Fees';
+                } else if (expenseLower.includes('sbc') || expenseLower.includes('gat ticket')) {
+                    category = 'G&A';
+                    subcategory = 'Travel & Entertainment';
+                } else if (expenseLower.includes('comida') || expenseLower.includes('almuerzo')) {
+                    category = 'G&A';
+                    subcategory = 'Travel & Entertainment';
+                } else if (expenseLower.includes('translation') || expenseLower.includes('english translation')) {
+                    category = 'G&A';
+                    subcategory = 'Professional Services - Legal';
+                } else if (expenseLower.includes('brand') || expenseLower.includes('pitch deck') || expenseLower.includes('design')) {
+                    category = 'Marketing';
+                    subcategory = 'Branding & Design';
+                } else if (expenseLower.includes('funding') || expenseLower.includes('aporte')) {
+                    category = 'Transfer';
+                    subcategory = 'Funding';
+                    isTransfer = true;
+                } else if (expenseLower.includes('comision') || expenseLower.includes('commission') || expenseLower.includes('impuesto') || expenseLower.includes('tax')) {
+                    category = 'Other Expenses';
+                    subcategory = 'Bank/Transaction Fees';
+                } else if (expenseLower.includes('regalo') || expenseLower.includes('promoción navidad')) {
+                    category = 'Marketing';
+                    subcategory = 'Promotional Giveaways';
+                } else if (expenseLower.includes('chiroc') || expenseLower.includes('cs center')) {
+                    category = 'Payroll';
+                    subcategory = 'Operations & Customer Support';
+                } else if (expenseLower.includes('recarga') || expenseLower.includes('crypto') || expenseLower.includes('cartera')) {
+                    category = 'Transfer';
+                    subcategory = 'Crypto Funding';
+                    isTransfer = true;
+                } else if (expenseLower.includes('fastoffshore') || expenseLower.includes('incorporation')) {
+                    category = 'G&A';
+                    subcategory = 'Professional Services - Legal';
+                } else if (expenseLower.includes('notary') || expenseLower.includes('certification')) {
+                    category = 'G&A';
+                    subcategory = 'Professional Services - Legal';
+                } else if (expenseLower.includes('duns') || expenseLower.includes('dun & bradstreet')) {
+                    category = 'G&A';
+                    subcategory = 'Business Registration';
+                } else if (expenseLower.includes('seal') || expenseLower.includes('corporate seal')) {
+                    category = 'G&A';
+                    subcategory = 'Office Supplies & Equipment';
+                } else if (expenseLower.includes('google play')) {
+                    category = 'Technology';
+                    subcategory = 'App Store Fees';
+                }
+                
+                // Track payor for investment analysis
+                let founderTag = '';
+                const payorLower = payor.toLowerCase();
+                if (payorLower.includes('josé') || payorLower.includes('jose')) {
+                    founderTag = 'José';
+                } else if (payorLower.includes('marcos')) {
+                    founderTag = 'Marcos';
+                } else if (payorLower.includes('javier')) {
+                    founderTag = 'Javier';
+                }
+                
+                transactions.push({
+                    id: `NOTION-${date}-${i}`,
+                    date,
+                    description: expense.substring(0, 80),
+                    source: 'Notion',
+                    originalCurrency: 'USD',
+                    originalAmount: -amount,
+                    amountUSD: -amount,
+                    category,
+                    subcategory,
+                    isTransfer,
+                    auto: category !== 'Uncategorized',
+                    payor: founderTag,
+                    expenseSource: source
+                });
             }
             
             return transactions;
