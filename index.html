@@ -795,7 +795,7 @@
                 <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23e4002b' width='100' height='100' rx='15'/%3E%3Cpath fill='white' d='M25 75 L50 20 L60 20 L85 75 L70 75 L65 62 L55 62 L55 75 Z M52 35 L42 55 L55 55 L55 35 Z'/%3E%3C/svg%3E" alt="Appuesta">
                 <div>
                     <div class="logo-text">Appuesta</div>
-                    <div class="logo-subtitle">CFO Dashboard <span style="opacity: 0.5; font-size: 10px;">v1.08</span></div>
+                    <div class="logo-subtitle">CFO Dashboard <span style="opacity: 0.5; font-size: 10px;">v1.09</span></div>
                 </div>
             </div>
 
@@ -2140,20 +2140,30 @@
         // ========================================
         // WEEKLY REPORT
         // ========================================
+        // Get the Monday of a given week
+        function getMondayOfWeek(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Sunday
+            return new Date(d.setDate(diff)).toISOString().split("T")[0];
+        }
+
+        // Current week being viewed (as date string)
+        let currentViewWeek = getMondayOfWeek(new Date());
+
         function getWeekDisplayDate() {
-            const weeks = getWeekDates();
-            currentWeekIndex = Math.max(0, Math.min(currentWeekIndex, weeks.length - 1));
-            return weeks[weeks.length - 1 - currentWeekIndex] || new Date().toISOString().split('T')[0];
+            return currentViewWeek;
         }
 
         function changeWeek(delta) {
-            const weeks = getWeekDates();
-            currentWeekIndex = Math.max(0, Math.min(currentWeekIndex - delta, weeks.length - 1));
+            const current = new Date(currentViewWeek);
+            current.setDate(current.getDate() + (delta * 7));
+            currentViewWeek = getMondayOfWeek(current);
             loadWeekData();
         }
 
         function goToCurrentWeek() {
-            currentWeekIndex = 0;
+            currentViewWeek = getMondayOfWeek(new Date());
             loadWeekData();
         }
 
